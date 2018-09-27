@@ -1,0 +1,1 @@
+sysbench /home/ubuntu/github/sysbench/tests/include/oltp_legacy=select.lua --mysql-db=sbtest --mysql-user=root --mysql-password=123456 --mysql-host=127.0.0.1 --mysql-port=3309 --oltp-tables-count=8 --oltp-table-size=1000 run

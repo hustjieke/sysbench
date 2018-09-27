@@ -1,0 +1,13 @@
+sysbench 1.0.11 (using system LuaJIT 2.1.0-beta3)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+FATAL: mysql_drv_query() returned error 1062 (Duplicate entry '-1553888753' for key 'PRIMARY') for query 'INSERT INTO sbtest7 (id, k, c, pad) VALUES (-1553888753, 5047, '29402558839-57355149248-99847696889-16938483582-04115684172-15074345484-09754623137-44340319896-92084924758-24971936422', '98101025965-19603370165-94144873435-92942491939-31881921631')'
+FATAL: `thread_run' function failed: oltp_insert.lua:61: SQL error, errno = 1062, state = '23000': Duplicate entry '-1553888753' for key 'PRIMARY'
