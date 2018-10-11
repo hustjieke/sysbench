@@ -9,5 +9,29 @@ Initializing worker threads...
 
 Threads started!
 
-FATAL: mysql_drv_query() returned error 1062 (Duplicate entry '-1553888753' for key 'PRIMARY') for query 'INSERT INTO sbtest7 (id, k, c, pad) VALUES (-1553888753, 5047, '29402558839-57355149248-99847696889-16938483582-04115684172-15074345484-09754623137-44340319896-92084924758-24971936422', '98101025965-19603370165-94144873435-92942491939-31881921631')'
-FATAL: `thread_run' function failed: oltp_insert.lua:61: SQL error, errno = 1062, state = '23000': Duplicate entry '-1553888753' for key 'PRIMARY'
+SQL statistics:
+    queries performed:
+        read:                            0
+        write:                           788
+        other:                           0
+        total:                           788
+    transactions:                        788    (157.32 per sec.)
+    queries:                             788    (157.32 per sec.)
+    ignored errors:                      0      (0.00 per sec.)
+    reconnects:                          0      (0.00 per sec.)
+
+General statistics:
+    total time:                          5.0065s
+    total number of events:              788
+
+Latency (ms):
+         min:                                  3.99
+         avg:                                  6.34
+         max:                                 25.97
+         95th percentile:                      9.91
+         sum:                               4999.53
+
+Threads fairness:
+    events (avg/stddev):           788.0000/0.00
+    execution time (avg/stddev):   4.9995/0.00
+

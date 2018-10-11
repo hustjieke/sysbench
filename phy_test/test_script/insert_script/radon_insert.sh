@@ -1,0 +1,6 @@
+echo "======== insert ========"
+
+#sysbench ../RadonDB_test_lua/oltp_insert.lua --mysql-db=sbtest --mysql-user=usr --mysql-password=123456 --mysql-host=172.31.102.94 --mysql-port=3306 --db-driver=mysql --db-ps-mode=disable --table_size=500000 --tables=10 --threads=512 --report-interval=3 --auto-inc=off run > oltp_insert.log 2>&1 &
+#原先的测试脚本,16张表，主键自增打开,预编译模式关闭,因为radondb不支持sysbench ../RadonDB_test_lua/oltp_insert.lua --mysql-db=sbtest --mysql-user=usr --mysql-password=123456 --mysql-host=172.31.102.94 --mysql-port=3306 --db-driver=mysql --db-ps-mode=disable --tables=16 --threads=256 --report-interval=2 --auto-inc=off --time=600 run > oltp_insert.log 2>&1 &
+#sysbench ../RadonDB_test_lua/oltp_insert.lua --mysql-db=sbtest --mysql-user=usr --mysql-password=123456 --mysql-host=172.31.102.94 --mysql-port=3306 --db-driver=mysql --db-ps-mode=disable --tables=16 --threads=512 --report-interval=5 --events=200000000 --auto-inc=off --time=360000 run > oltp_insert.log 2>&1 &
+sysbench ../../RadonDB_Mysql_test_lua/oltp_insert.lua --mysql-db=sbtest --mysql-user=usr --mysql-password=123456 --mysql-host=172.31.102.94 --mysql-port=3306 --db-driver=mysql --db-ps-mode=disable --tables=16 --threads=512 --report-interval=5 --events=20000 --auto-inc=off --time=360000 run > oltp_insert.log 2>&1 &
