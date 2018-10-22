@@ -4,4 +4,5 @@
 #echo "======== create database ========"
 #mysql -utest -ptest -h192.168.1.248 -e"create database testdb"
 echo "======== prepare ========"
-sysbench oltp_common.lua --mysql-db=sbtest --mysql-user=root --mysql-password=123456 --mysql-host=127.0.0.1 --mysql-port=3308 --db-driver=mysql prepare > oltp_prepare.log 2>&1 &
+#sysbench oltp_common.lua --mysql-db=sbtest --mysql-user=root --mysql-password=123456 --mysql-host=127.0.0.1 --mysql-port=3308 --db-driver=mysql --table_size=0 --secondary=off prepare
+sysbench oltp_common.lua --mysql-db=sbtest --mysql-user=root --mysql-password=123456 --mysql-host=127.0.0.1 --mysql-port=3308 --db-driver=mysql --table_size=0 --secondary=off prepare

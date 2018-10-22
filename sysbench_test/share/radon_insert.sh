@@ -6,4 +6,4 @@
 #echo "======== prepare ========"
 #sysbench oltp_common.lua --mysql-db=sbtest --mysql-user=root --mysql-password=123456 --mysql-host=127.0.0.1 --mysql-port=3309 --db-driver=mysql prepare
 echo "======== insert ========"
-sysbench oltp_insert.lua --mysql-db=sbtest --mysql-user=root --mysql-password=123456 --mysql-host=127.0.0.1 --mysql-port=3308 --db-driver=mysql --time=5 --db-ps-mode=disable run > oltp_insert.log 2>&1 &
+sysbench oltp_insert.lua --mysql-db=sbtest --mysql-user=root --mysql-password=123456 --mysql-host=127.0.0.1 --mysql-port=3308 --db-driver=mysql --time=3605 --events=2000000 --db-ps-mode=disable --threads=128 --report-interval=5 run > oltp_insert.log 2>&1 &

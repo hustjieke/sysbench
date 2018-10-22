@@ -8,4 +8,4 @@ https://msdn.microsoft.com/en-us/commandline/wsl/about
 After installing WSL and getting a bash prompt, following Debian/Ubuntu
 build instructions is sufficient.
 
-Alternatively, one can build and use sysbench 0.5 natively for Windows.
+Alternatively, one can build and use sysbench 0.5 natively for Windows..
