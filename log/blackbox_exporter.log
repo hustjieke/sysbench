@@ -1,0 +1,3 @@
+level=info ts=2018-11-01T11:52:01.571096569Z caller=main.go:213 msg="Starting blackbox_exporter" version="(version=0.12.0, branch=HEAD, revision=4a22506cf0cf139d9b2f9cde099f0012d9fcabde)"
+level=info ts=2018-11-01T11:52:01.571902013Z caller=main.go:220 msg="Loaded config file"
+level=info ts=2018-11-01T11:52:01.572095643Z caller=main.go:324 msg="Listening on address" address=:9115

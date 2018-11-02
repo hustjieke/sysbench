@@ -58,7 +58,7 @@ sysbench.cmdline.options = {
    auto_inc =
    {"Use AUTO_INCREMENT column as Primary Key (for MySQL), " ..
        "or its alternatives in other DBMS. When disabled, use " ..
-       "client-generated IDs", false},
+       "client-generated IDs", true},
    skip_trx =
       {"Don't start explicit transactions and execute all queries " ..
           "in the AUTOCOMMIT mode", true},
@@ -191,7 +191,7 @@ CREATE TABLE sbtest%d(
   c CHAR(120) DEFAULT '',
   pad CHAR(60) DEFAULT '',
   %s (id)
-) partition by hash(id) %s %s]],
+) partition by hash(pad) %s %s]],
       table_num, id_def, id_index_def, engine_def, extra_table_options)
 
    con:query(query)

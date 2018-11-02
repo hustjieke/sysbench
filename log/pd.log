@@ -1,0 +1,214 @@
+2018/11/01 19:52:07.512 util.go:56: [info] Welcome to Placement Driver (PD).
+2018/11/01 19:52:07.512 util.go:57: [info] Release Version: v2.1.0-rc.2-34-g4cdbcca
+2018/11/01 19:52:07.512 util.go:58: [info] Git Commit Hash: 4cdbccab34f940e1e0ee508901931f598fccdb2c
+2018/11/01 19:52:07.512 util.go:59: [info] Git Branch: master
+2018/11/01 19:52:07.512 util.go:60: [info] UTC Build Time:  2018-10-31 06:46:21
+2018/11/01 19:52:07.512 metricutil.go:79: [info] disable Prometheus push client
+2018/11/01 19:52:07.513 server.go:106: [info] PD config - {
+  "client-urls": "http://172.31.102.93:2379",
+  "peer-urls": "http://172.31.102.93:2380",
+  "advertise-client-urls": "http://172.31.102.93:2379",
+  "advertise-peer-urls": "http://172.31.102.93:2380",
+  "name": "pd1",
+  "data-dir": "/home/tidb/deploy/data.pd",
+  "initial-cluster": "pd1=http://172.31.102.93:2380,pd2=http://172.31.102.94:2380,pd3=http://172.31.102.96:2380",
+  "initial-cluster-state": "new",
+  "join": "",
+  "lease": 3,
+  "log": {
+    "level": "info",
+    "format": "text",
+    "disable-timestamp": false,
+    "file": {
+      "filename": "/home/tidb/deploy/log/pd.log",
+      "log-rotate": true,
+      "max-size": 300,
+      "max-days": 0,
+      "max-backups": 0
+    }
+  },
+  "log-file": "",
+  "log-level": "",
+  "tso-save-interval": "3s",
+  "metric": {
+    "job": "pd1",
+    "address": "",
+    "interval": "0s"
+  },
+  "schedule": {
+    "max-snapshot-count": 3,
+    "max-pending-peer-count": 16,
+    "max-merge-region-size": 20,
+    "max-merge-region-keys": 200000,
+    "split-merge-interval": "1h0m0s",
+    "patrol-region-interval": "100ms",
+    "max-store-down-time": "30m0s",
+    "leader-schedule-limit": 4,
+    "region-schedule-limit": 4,
+    "replica-schedule-limit": 8,
+    "merge-schedule-limit": 8,
+    "tolerant-size-ratio": 5,
+    "low-space-ratio": 0.8,
+    "high-space-ratio": 0.6,
+    "disable-raft-learner": "false",
+    "disable-remove-down-replica": "false",
+    "disable-replace-offline-replica": "false",
+    "disable-make-up-replica": "false",
+    "disable-remove-extra-replica": "false",
+    "disable-location-replacement": "false",
+    "disable-namespace-relocation": "false",
+    "schedulers-v2": [
+      {
+        "type": "balance-region",
+        "args": null,
+        "disable": false
+      },
+      {
+        "type": "balance-leader",
+        "args": null,
+        "disable": false
+      },
+      {
+        "type": "hot-region",
+        "args": null,
+        "disable": false
+      },
+      {
+        "type": "label",
+        "args": null,
+        "disable": false
+      }
+    ]
+  },
+  "replication": {
+    "max-replicas": 3,
+    "location-labels": ""
+  },
+  "namespace": {},
+  "pd-server": {
+    "enable-region-storage": false
+  },
+  "cluster-version": "0.0.0",
+  "quota-backend-bytes": "0 B",
+  "auto-compaction-mode": "periodic",
+  "auto-compaction-retention-v2": "1h",
+  "TickInterval": "500ms",
+  "ElectionInterval": "3s",
+  "PreVote": true,
+  "security": {
+    "cacert-path": "",
+    "cert-path": "",
+    "key-path": ""
+  },
+  "label-property": null,
+  "WarningMsgs": null,
+  "namespace-classifier": "table",
+  "LeaderPriorityCheckInterval": "1m0s"
+}
+2018/11/01 19:52:07.518 server.go:138: [info] start embed etcd
+2018/11/01 19:52:07.518 systime_mon.go:24: [info] start system time monitor
+2018/11/01 19:52:07.518 log.go:88: [info] embed: [pprof is enabled under /debug/pprof]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [name = pd1]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [data dir = /home/tidb/deploy/data.pd]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [member dir = /home/tidb/deploy/data.pd/member]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [heartbeat = 500ms]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [election = 3000ms]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [snapshot count = 100000]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [advertise client URLs = http://172.31.102.93:2379]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [initial advertise peer URLs = http://172.31.102.93:2380]
+2018/11/01 19:52:07.521 log.go:88: [info] etcdserver: [initial cluster = pd1=http://172.31.102.93:2380,pd2=http://172.31.102.94:2380,pd3=http://172.31.102.96:2380]
+2018/11/01 19:52:07.522 log.go:88: [info] etcdserver: [starting member 6d246c0ada1b5c4a in cluster 3bc9f4a1db2d44bc]
+2018/11/01 19:52:07.522 raft.go:656: [info] 6d246c0ada1b5c4a became follower at term 0
+2018/11/01 19:52:07.522 raft.go:364: [info] newRaft 6d246c0ada1b5c4a [peers: [], term: 0, commit: 0, applied: 0, lastindex: 0, lastterm: 0]
+2018/11/01 19:52:07.522 raft.go:656: [info] 6d246c0ada1b5c4a became follower at term 1
+2018/11/01 19:52:07.524 log.go:84: [warning] auth: [simple token is not cryptographically signed]
+2018/11/01 19:52:07.525 log.go:88: [info] rafthttp: [starting peer 8c4c4ff7b4f0b3f7...]
+2018/11/01 19:52:07.525 log.go:88: [info] rafthttp: [started HTTP pipelining with peer 8c4c4ff7b4f0b3f7]
+2018/11/01 19:52:07.526 log.go:88: [info] rafthttp: [started streaming with peer 8c4c4ff7b4f0b3f7 (writer)]
+2018/11/01 19:52:07.527 log.go:88: [info] rafthttp: [started streaming with peer 8c4c4ff7b4f0b3f7 (writer)]
+2018/11/01 19:52:07.529 log.go:88: [info] rafthttp: [started peer 8c4c4ff7b4f0b3f7]
+2018/11/01 19:52:07.529 log.go:88: [info] rafthttp: [added peer 8c4c4ff7b4f0b3f7]
+2018/11/01 19:52:07.529 log.go:88: [info] rafthttp: [starting peer a99b549a96734373...]
+2018/11/01 19:52:07.529 log.go:88: [info] rafthttp: [started streaming with peer 8c4c4ff7b4f0b3f7 (stream Message reader)]
+2018/11/01 19:52:07.529 log.go:88: [info] rafthttp: [started HTTP pipelining with peer a99b549a96734373]
+2018/11/01 19:52:07.529 log.go:88: [info] rafthttp: [started streaming with peer 8c4c4ff7b4f0b3f7 (stream MsgApp v2 reader)]
+2018/11/01 19:52:07.530 log.go:88: [info] rafthttp: [started streaming with peer a99b549a96734373 (writer)]
+2018/11/01 19:52:07.530 log.go:88: [info] rafthttp: [started streaming with peer a99b549a96734373 (writer)]
+2018/11/01 19:52:07.530 log.go:88: [info] rafthttp: [peer 8c4c4ff7b4f0b3f7 became active]
+2018/11/01 19:52:07.531 log.go:88: [info] rafthttp: [established a TCP streaming connection with peer 8c4c4ff7b4f0b3f7 (stream Message reader)]
+2018/11/01 19:52:07.531 log.go:88: [info] rafthttp: [started peer a99b549a96734373]
+2018/11/01 19:52:07.531 log.go:88: [info] rafthttp: [added peer a99b549a96734373]
+2018/11/01 19:52:07.531 log.go:88: [info] embed: [6d246c0ada1b5c4a starting with cors ["*"]]
+2018/11/01 19:52:07.531 log.go:88: [info] embed: [6d246c0ada1b5c4a starting with host whitelist ["*"]]
+2018/11/01 19:52:07.531 log.go:88: [info] etcdserver: [starting server... [version: 3.3.0+git, cluster version: to_be_decided]]
+2018/11/01 19:52:07.531 log.go:88: [info] rafthttp: [started streaming with peer a99b549a96734373 (stream Message reader)]
+2018/11/01 19:52:07.532 log.go:88: [info] rafthttp: [started streaming with peer a99b549a96734373 (stream MsgApp v2 reader)]
+2018/11/01 19:52:07.532 log.go:88: [info] rafthttp: [established a TCP streaming connection with peer 8c4c4ff7b4f0b3f7 (stream MsgApp v2 reader)]
+2018/11/01 19:52:07.533 log.go:88: [info] etcdserver/membership: [added member 6d246c0ada1b5c4a [http://172.31.102.93:2380] to cluster 3bc9f4a1db2d44bc]
+2018/11/01 19:52:07.533 log.go:88: [info] etcdserver/membership: [added member 8c4c4ff7b4f0b3f7 [http://172.31.102.94:2380] to cluster 3bc9f4a1db2d44bc]
+2018/11/01 19:52:07.533 log.go:88: [info] etcdserver/membership: [added member a99b549a96734373 [http://172.31.102.96:2380] to cluster 3bc9f4a1db2d44bc]
+2018/11/01 19:52:07.535 log.go:88: [info] embed: [listening for peers on  172.31.102.93:2380]
+2018/11/01 19:52:07.536 log.go:88: [info] rafthttp: [established a TCP streaming connection with peer 8c4c4ff7b4f0b3f7 (stream Message writer)]
+2018/11/01 19:52:07.536 log.go:88: [info] rafthttp: [established a TCP streaming connection with peer 8c4c4ff7b4f0b3f7 (stream MsgApp v2 writer)]
+2018/11/01 19:52:07.538 log.go:84: [warning] etcdserver: [could not get cluster response from http://172.31.102.96:2380: Get http://172.31.102.96:2380/members: dial tcp 172.31.102.96:2380: connect: connection refused]
+2018/11/01 19:52:07.538 etcdutil.go:62: [error] could not retrieve cluster information from the given URLs
+2018/11/01 19:52:07.718 log.go:88: [info] rafthttp: [peer a99b549a96734373 became active]
+2018/11/01 19:52:07.718 log.go:88: [info] rafthttp: [established a TCP streaming connection with peer a99b549a96734373 (stream MsgApp v2 writer)]
+2018/11/01 19:52:07.718 log.go:88: [info] rafthttp: [established a TCP streaming connection with peer a99b549a96734373 (stream Message writer)]
+2018/11/01 19:52:07.732 log.go:88: [info] etcdserver: [6d246c0ada1b5c4a initialized peer connection; fast-forwarding 4 ticks (election ticks 6) with 2 active peer(s)]
+2018/11/01 19:52:07.734 log.go:88: [info] rafthttp: [established a TCP streaming connection with peer a99b549a96734373 (stream Message reader)]
+2018/11/01 19:52:07.734 log.go:88: [info] rafthttp: [established a TCP streaming connection with peer a99b549a96734373 (stream MsgApp v2 reader)]
+2018/11/01 19:52:08.519 raft.go:882: [info] 6d246c0ada1b5c4a [logterm: 1, index: 3, vote: 0] cast MsgPreVote for 8c4c4ff7b4f0b3f7 [logterm: 1, index: 3] at term 1
+2018/11/01 19:52:08.520 raft.go:797: [info] 6d246c0ada1b5c4a [term: 1] received a MsgVote message with higher term from 8c4c4ff7b4f0b3f7 [term: 2]
+2018/11/01 19:52:08.520 raft.go:656: [info] 6d246c0ada1b5c4a became follower at term 2
+2018/11/01 19:52:08.520 raft.go:882: [info] 6d246c0ada1b5c4a [logterm: 1, index: 3, vote: 0] cast MsgVote for 8c4c4ff7b4f0b3f7 [logterm: 1, index: 3] at term 2
+2018/11/01 19:52:08.520 node.go:306: [info] raft.node: 6d246c0ada1b5c4a elected leader 8c4c4ff7b4f0b3f7 at term 2
+2018/11/01 19:52:08.522 server.go:168: [info] create etcd v3 client with endpoints [http://172.31.102.93:2379]
+2018/11/01 19:52:08.522 log.go:88: [info] etcdserver: [published {Name:pd1 ClientURLs:[http://172.31.102.93:2379]} to cluster 3bc9f4a1db2d44bc]
+2018/11/01 19:52:08.522 log.go:88: [info] embed: [ready to serve client requests]
+2018/11/01 19:52:08.523 log.go:86: [info] embed: [serving insecure client requests on 172.31.102.93:2379, this is strongly discouraged!]
+2018/11/01 19:52:08.525 log.go:86: [info] etcdserver/membership: [set the initial cluster version to 3.3]
+2018/11/01 19:52:08.525 log.go:88: [info] etcdserver/api: [enabled capabilities for version 3.3]
+2018/11/01 19:52:08.530 server.go:207: [info] init cluster id 6618858687391433327
+2018/11/01 19:52:08.533 namespace_classifier.go:438: [info] load 0 namespacesInfo cost 994.13µs
+2018/11/01 19:52:08.535 leader.go:110: [info] pd1 is not etcd leader, skip campaign leader and check later
+2018/11/01 19:52:08.736 leader.go:102: [info] leader is name:"pd2" member_id:10109543188851110903 peer_urls:"http://172.31.102.94:2380" client_urls:"http://172.31.102.94:2379" , watch it
+2018/11/01 19:52:08.737 leader.go:387: [info] server disable region storage
+2018/11/01 20:52:07.029 log.go:88: [info] mvcc: [store.index: compact 1]
+2018/11/01 20:52:07.029 log.go:88: [info] mvcc: [finished scheduled compaction at 1 (took 33.637µs)]
+2018/11/01 21:52:07.026 log.go:88: [info] mvcc: [store.index: compact 1242]
+2018/11/01 21:52:07.029 log.go:88: [info] mvcc: [finished scheduled compaction at 1242 (took 2.160051ms)]
+2018/11/01 22:52:07.020 log.go:88: [info] mvcc: [store.index: compact 2448]
+2018/11/01 22:52:07.022 log.go:88: [info] mvcc: [finished scheduled compaction at 2448 (took 2.120256ms)]
+2018/11/01 23:52:07.028 log.go:88: [info] mvcc: [store.index: compact 3654]
+2018/11/01 23:52:07.031 log.go:88: [info] mvcc: [finished scheduled compaction at 3654 (took 2.146596ms)]
+2018/11/02 00:52:07.034 log.go:88: [info] mvcc: [store.index: compact 4860]
+2018/11/02 00:52:07.037 log.go:88: [info] mvcc: [finished scheduled compaction at 4860 (took 2.151914ms)]
+2018/11/02 01:52:07.039 log.go:88: [info] mvcc: [store.index: compact 6066]
+2018/11/02 01:52:07.041 log.go:88: [info] mvcc: [finished scheduled compaction at 6066 (took 1.801923ms)]
+2018/11/02 02:52:07.038 log.go:88: [info] mvcc: [store.index: compact 7272]
+2018/11/02 02:52:07.040 log.go:88: [info] mvcc: [finished scheduled compaction at 7272 (took 1.977835ms)]
+2018/11/02 03:52:07.046 log.go:88: [info] mvcc: [store.index: compact 8478]
+2018/11/02 03:52:07.048 log.go:88: [info] mvcc: [finished scheduled compaction at 8478 (took 2.1361ms)]
+2018/11/02 04:52:07.051 log.go:88: [info] mvcc: [store.index: compact 9684]
+2018/11/02 04:52:07.053 log.go:88: [info] mvcc: [finished scheduled compaction at 9684 (took 2.13846ms)]
+2018/11/02 05:52:07.059 log.go:88: [info] mvcc: [store.index: compact 10890]
+2018/11/02 05:52:07.061 log.go:88: [info] mvcc: [finished scheduled compaction at 10890 (took 2.06366ms)]
+2018/11/02 06:52:07.066 log.go:88: [info] mvcc: [store.index: compact 12096]
+2018/11/02 06:52:07.069 log.go:88: [info] mvcc: [finished scheduled compaction at 12096 (took 2.128882ms)]
+2018/11/02 07:52:07.064 log.go:88: [info] mvcc: [store.index: compact 13302]
+2018/11/02 07:52:07.066 log.go:88: [info] mvcc: [finished scheduled compaction at 13302 (took 2.119038ms)]
+2018/11/02 08:52:07.058 log.go:88: [info] mvcc: [store.index: compact 14508]
+2018/11/02 08:52:07.060 log.go:88: [info] mvcc: [finished scheduled compaction at 14508 (took 2.126262ms)]
+2018/11/02 09:52:07.050 log.go:88: [info] mvcc: [store.index: compact 15714]
+2018/11/02 09:52:07.053 log.go:88: [info] mvcc: [finished scheduled compaction at 15714 (took 2.135139ms)]
+2018/11/02 10:52:07.051 log.go:88: [info] mvcc: [store.index: compact 16920]
+2018/11/02 10:52:07.053 log.go:88: [info] mvcc: [finished scheduled compaction at 16920 (took 2.110081ms)]
+2018/11/02 11:52:07.060 log.go:88: [info] mvcc: [store.index: compact 18126]
+2018/11/02 11:52:07.063 log.go:88: [info] mvcc: [finished scheduled compaction at 18126 (took 2.122478ms)]
+2018/11/02 12:52:07.064 log.go:88: [info] mvcc: [store.index: compact 19659]
+2018/11/02 12:52:07.067 log.go:88: [info] mvcc: [finished scheduled compaction at 19659 (took 2.669429ms)]
+2018/11/02 13:52:07.077 log.go:88: [info] mvcc: [store.index: compact 20866]
+2018/11/02 13:52:07.080 log.go:88: [info] mvcc: [finished scheduled compaction at 20866 (took 2.174275ms)]
+2018/11/02 14:52:07.078 log.go:88: [info] mvcc: [store.index: compact 22072]
+2018/11/02 14:52:07.080 log.go:88: [info] mvcc: [finished scheduled compaction at 22072 (took 2.082568ms)]
