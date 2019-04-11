@@ -30,7 +30,9 @@ SUPPORTED_ACTIONS = {
     "start": "start datatravel",
     "updateparam": "update datatravel parameters",
     "startalertmanager": "start alertmanager",
-    "stopalertmanager": "stop alertmanager"
+    "stopalertmanager": "stop alertmanager",
+    "travelprogress": "show alertmanager"
+    #"travelprogress": "show the progress rate of datatravel"
 }
 DATATRAVEL_VERSION_FILE= "/etc/datatravel/version"
 DATATRAVEL_CNF = "/etc/datatravel/datatravel.conf"
@@ -92,7 +94,7 @@ def start_datatravel(params, flock_path):
 
     generate_cnf(params, flock_path)
 
-    cmd= "/opt/datatravel/bin/datatravel --mysqldump=/usr/local/bin/mysqldump --from=%s --from-user=%s --from-password=%s --to=%s --to-user=%s --to-password=%s" % (params["from_host_mysqlPort"], params["from_user"], params["from_password"], params["to_host_mysqlPort"] ,params["to_user"], params["to_password"])
+    cmd= "/opt/datatravel/bin/datatravel --mysqldump=/usr/local/bin/mysqldump --from=%s --from-user=%s --from-password=%s --to=%s --to-user=%s --to-password=%s  --to-flavor=%s --set-global-read-lock=%s --checksum=%s >> /data/log/datatravel.log 2>&1 &" % (params["from_host_mysqlPort"], params["from_user"], params["from_password"], params["to_host_mysqlPort"] ,params["to_user"], params["to_password"], params["to_flavor"], params["set_global_read_lock"], params["checksum"])
 
     logger.info("datatravel cmd:%s", cmd)
     ret_code, output = exec_cmd(cmd)
@@ -159,6 +161,28 @@ def stop_alertmanager():
     logger.info("stop_alertmanager succeeded")
     return 0
 
+def travel_progress():
+    logger.info("show travel progress")
+
+    ret_code, output = exec_cmd("/opt/datatravel/bin/datatravelcli datatravel progressrate")
+    if ret_code != 0:
+        print("show travel progress fail")
+        logger.error('execute datatravel failed, reason: %s' % output)
+        return -1
+    logger.info("test:", output)
+    status = json.loads(output)
+    DumpProgress = status["dump-progress"].split(":")[0]
+    DumpRemainTime = status["remain-time"].split(":")[0]
+    IncreBehinds = status["position-behinds"].split(":")[0]
+
+    travelProgress = {
+       "labels": ["全量迁移进度", "全量迁移剩余时间估计", "增量迁移落后源集群位点pos"],
+       "data": [[DumpProgress, DumpRemainTime, IncreBehinds]]
+    }
+
+    print(json.dumps(travelProgress))
+
+
 def print_usage():
     print "usage:\n"
     #new_actions = sorted(SUPPORTED_ACTIONS.items(), lambda x, y: cmp(x[0], y[0]))
@@ -199,6 +223,8 @@ if __name__ == "__main__":
             ret = start_alertmanager()
         elif action == "stopalertmanager":
             ret = stop_alertmanager()
+        elif action == "travelprogress":
+            ret = travel_progress()
         exit(ret)
     except Exception, e:
         logger.error("%s" % traceback.format_exc())
