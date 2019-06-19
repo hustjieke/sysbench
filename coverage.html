@@ -1,0 +1,3109 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">shift/cleanup.go (86.5%)</option>
+				
+				<option value="file1">shift/common.go (33.3%)</option>
+				
+				<option value="file2">shift/delete.go (95.8%)</option>
+				
+				<option value="file3">shift/handler.go (90.6%)</option>
+				
+				<option value="file4">shift/http.go (81.5%)</option>
+				
+				<option value="file5">shift/insert.go (95.0%)</option>
+				
+				<option value="file6">shift/mock.go (82.9%)</option>
+				
+				<option value="file7">shift/parse_value.go (100.0%)</option>
+				
+				<option value="file8">shift/pool.go (81.8%)</option>
+				
+				<option value="file9">shift/radon.go (79.5%)</option>
+				
+				<option value="file10">shift/shift.go (77.7%)</option>
+				
+				<option value="file11">shift/unsafe.go (100.0%)</option>
+				
+				<option value="file12">shift/update.go (96.9%)</option>
+				
+				<option value="file13">vendor/github.com/siddontang/go-mysql/canal/canal.go (67.1%)</option>
+				
+				<option value="file14">vendor/github.com/siddontang/go-mysql/canal/config.go (55.0%)</option>
+				
+				<option value="file15">vendor/github.com/siddontang/go-mysql/canal/dump.go (45.8%)</option>
+				
+				<option value="file16">vendor/github.com/siddontang/go-mysql/canal/handler.go (70.0%)</option>
+				
+				<option value="file17">vendor/github.com/siddontang/go-mysql/canal/master.go (65.2%)</option>
+				
+				<option value="file18">vendor/github.com/siddontang/go-mysql/canal/rows.go (50.0%)</option>
+				
+				<option value="file19">vendor/github.com/siddontang/go-mysql/canal/sync.go (64.9%)</option>
+				
+				<option value="file20">vendor/github.com/siddontang/go-mysql/canal/xa.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "fmt"
+        "strings"
+
+        "github.com/siddontang/go-mysql/client"
+)
+
+// Cleanup used to clean up the table on the from who has shifted,
+// Or cleanup the to tables who half shifted.
+// This func must be called after canal closed, otherwise it maybe replicated by canal.
+func (shift *Shift) Cleanup() <span class="cov8" title="1">{
+        log := shift.log
+
+        // Set throttle to unlimits.
+        if err := shift.setRadonThrottle(0); err != nil </span><span class="cov8" title="1">{
+                log.Error("shift.cleanup.set.radon.throttle.error:%+v", err)
+        }</span>
+
+        // Set readonly to false.
+        <span class="cov8" title="1">if err := shift.setRadonReadOnly(false); err != nil </span><span class="cov8" title="1">{
+                log.Error("shift.cleanup.set.radon.readonly.error:%+v", err)
+        }</span>
+
+        // Cleanup.
+        <span class="cov8" title="1">if shift.cfg.Cleanup </span><span class="cov8" title="1">{
+                if shift.allDone </span><span class="cov8" title="1">{
+                        shift.cleanupFrom()
+                }</span> else<span class="cov8" title="1"> {
+                        shift.cleanupTo()
+                }</span>
+        }
+}
+
+// cleanupFrom used to cleanup the table on from.
+// This func was called after shift succuess with cfg.Cleanup=true.
+func (shift *Shift) cleanupFrom() <span class="cov8" title="1">{
+        log := shift.log
+        cfg := shift.cfg
+
+        log.Info("shift.cleanup.from.table[%s.%s]...", cfg.FromDatabase, cfg.FromTable)
+        if _, isSystem := sysDatabases[strings.ToLower(cfg.FromDatabase)]; !isSystem </span><span class="cov8" title="1">{
+                from, err := client.Connect(cfg.From, cfg.FromUser, cfg.FromPassword, "")
+                if err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.cleanup.connection.error:%+v", err)
+                }</span>
+                <span class="cov8" title="1">defer from.Close()
+
+                sql := fmt.Sprintf("drop table `%s`.`%s`", cfg.FromDatabase, cfg.FromTable)
+                if _, err := from.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.execute.sql[%s].error:%+v", sql, err)
+                }</span>
+        } else<span class="cov8" title="1"> {
+                log.Info("shift.table.is.system.cleanup.skip...")
+        }</span>
+        <span class="cov8" title="1">log.Info("shift.cleanup.from.table.done...")</span>
+}
+
+// cleanupTo used to cleanup the table on to.
+// This func was called when shift failed.
+func (shift *Shift) cleanupTo() <span class="cov8" title="1">{
+        log := shift.log
+        cfg := shift.cfg
+
+        log.Info("shift.cleanup.to[%s/%s]...", cfg.ToDatabase, cfg.ToTable)
+        if _, isSystem := sysDatabases[strings.ToLower(cfg.FromDatabase)]; !isSystem </span><span class="cov8" title="1">{
+                to, err := client.Connect(cfg.To, cfg.ToUser, cfg.ToPassword, "")
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error("shift.cleanup.to.connect.error:%+v", err)
+                        return
+                }</span>
+                <span class="cov8" title="1">defer to.Close()
+
+                sql := fmt.Sprintf("drop table `%s`.`%s`", cfg.ToDatabase, cfg.ToTable)
+                if _, err := to.Execute(sql); err != nil </span><span class="cov8" title="1">{
+                        log.Error("shift.cleanup.to.execute[%s].error:%+v", sql, err)
+                        return
+                }</span>
+        } else<span class="cov0" title="0"> {
+                log.Info("shift.table.is.system.cleanup.skip...")
+        }</span>
+        <span class="cov8" title="1">log.Info("shift.cleanup.to.done...")</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "bytes"
+        "xlog"
+)
+
+var sysDatabases = map[string]bool{
+        "sys":                true,
+        "mysql":              true,
+        "information_schema": true,
+        "performance_schema": true,
+}
+
+func logPanicHandler(log *xlog.Log, format string, v ...interface{}) <span class="cov0" title="0">{
+        log.Fatal(format, v...)
+}</span>
+
+// EscapeBytes used to escape the literal byte.
+func EscapeBytes(bytesArray []byte) []byte <span class="cov8" title="1">{
+        var buffer bytes.Buffer
+
+        for _, b := range bytesArray </span><span class="cov8" title="1">{
+                // See https://dev.mysql.com/doc/refman/5.7/en/string-literals.html
+                // for more information on how to escape string literals in MySQL.
+                switch b </span>{
+                case 0:<span class="cov0" title="0">
+                        buffer.WriteString(`\0`)</span>
+                case '\'':<span class="cov0" title="0">
+                        buffer.WriteString(`\'`)</span>
+                case '"':<span class="cov0" title="0">
+                        buffer.WriteString(`\"`)</span>
+                case '\b':<span class="cov0" title="0">
+                        buffer.WriteString(`\b`)</span>
+                case '\n':<span class="cov0" title="0">
+                        buffer.WriteString(`\n`)</span>
+                case '\r':<span class="cov0" title="0">
+                        buffer.WriteString(`\r`)</span>
+                case '\t':<span class="cov0" title="0">
+                        buffer.WriteString(`\t`)</span>
+                case 0x1A:<span class="cov0" title="0">
+                        buffer.WriteString(`\Z`)</span>
+                case '\\':<span class="cov0" title="0">
+                        buffer.WriteString(`\\`)</span>
+                default:<span class="cov8" title="1">
+                        buffer.WriteByte(b)</span>
+                }
+        }
+        <span class="cov8" title="1">return buffer.Bytes()</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "fmt"
+        "strings"
+
+        "github.com/siddontang/go-mysql/canal"
+        "github.com/siddontang/go-mysql/client"
+)
+
+func (h *EventHandler) DeleteRow(e *canal.RowsEvent) <span class="cov8" title="1">{
+        var conn *client.Conn
+        cfg := h.shift.cfg
+
+        h.wg.Add(1)
+        executeFunc := func(conn *client.Conn) </span><span class="cov8" title="1">{
+                defer h.wg.Done()
+                var keep = true
+
+                pks := e.Table.PKColumns
+                for i, row := range e.Rows </span><span class="cov8" title="1">{
+                        var values []string
+
+                        // keep connection in the loop, just put conn to pool when execute the last row
+                        if (i + 1) == len(e.Rows) </span><span class="cov8" title="1">{
+                                keep = false
+                        }</span>
+
+                        // We have pk columns.
+                        <span class="cov8" title="1">if len(pks) &gt; 0 </span><span class="cov8" title="1">{
+                                for _, pk := range pks </span><span class="cov8" title="1">{
+                                        v := row[pk]
+                                        values = append(values, fmt.Sprintf("%s=%s", e.Table.Columns[pk].Name, h.ParseValue(e, pk, v)))
+                                }</span>
+                        } else<span class="cov8" title="1"> {
+                                for j, v := range row </span><span class="cov8" title="1">{
+                                        if v == nil </span><span class="cov8" title="1">{
+                                                continue</span>
+                                        }
+                                        <span class="cov8" title="1">values = append(values, fmt.Sprintf("%s=%s", e.Table.Columns[j].Name, h.ParseValue(e, j, v)))</span>
+                                }
+                        }
+
+                        <span class="cov8" title="1">query := &amp;Query{
+                                sql:       fmt.Sprintf("delete from `%s`.`%s` where %s", cfg.ToDatabase, cfg.ToTable, strings.Join(values, " and ")),
+                                typ:       QueryType_DELETE,
+                                skipError: false,
+                        }
+                        h.execute(conn, keep, query)</span>
+                }
+        }
+
+        <span class="cov8" title="1">if conn = h.shift.toPool.Get(); conn == nil </span><span class="cov0" title="0">{
+                h.shift.panicMe("shift.delete.get.to.conn.nil.error")
+        }</span>
+
+        <span class="cov8" title="1">executeFunc(conn)</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "strings"
+        "sync"
+        "xlog"
+
+        "github.com/siddontang/go-mysql/canal"
+        "github.com/siddontang/go-mysql/client"
+)
+
+type QueryType int
+
+const (
+        QueryType_INSERT      QueryType = 0
+        QueryType_DELETE      QueryType = 1
+        QueryType_UPDATE      QueryType = 2
+        QueryType_XA_ROLLBACK QueryType = 3
+)
+
+type Query struct {
+        sql       string
+        typ       QueryType
+        skipError bool
+}
+
+type EventHandler struct {
+        wg    sync.WaitGroup
+        log   *xlog.Log
+        shift *Shift
+        canal.DummyEventHandler
+}
+
+func NewEventHandler(log *xlog.Log, shift *Shift) *EventHandler <span class="cov8" title="1">{
+        return &amp;EventHandler{
+                log:   log,
+                shift: shift,
+        }
+}</span>
+
+// OnRow used to handle the Insert/Delete/Update events.
+func (h *EventHandler) OnRow(e *canal.RowsEvent) error <span class="cov8" title="1">{
+        cfg := h.shift.cfg
+
+        if e.Table.Schema == cfg.FromDatabase &amp;&amp; e.Table.Name == cfg.FromTable </span><span class="cov8" title="1">{
+                switch e.Action </span>{
+                case canal.InsertAction:<span class="cov8" title="1">
+                        _, isSystem := sysDatabases[strings.ToLower(e.Table.Schema)]
+                        h.InsertRow(e, isSystem)</span>
+                case canal.DeleteAction:<span class="cov8" title="1">
+                        h.DeleteRow(e)</span>
+                case canal.UpdateAction:<span class="cov8" title="1">
+                        h.UpdateRow(e)</span>
+                default:<span class="cov0" title="0">
+                        h.shift.panicMe("shift.handler.unsupported.event[%+v]", e)</span>
+                }
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+// OnTableChanged used to handle the QueryEvent and XAEvent.
+func (h *EventHandler) OnTableChanged(schema string, table string) error <span class="cov8" title="1">{
+        cfg := h.shift.cfg
+
+        if cfg.FromDatabase == schema &amp;&amp; cfg.FromTable == table </span><span class="cov8" title="1">{
+                h.shift.panicMe("shift.cant.do.ddl[%v, %v].during.shifting...", schema, table)
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (h *EventHandler) OnXA(e *canal.XAEvent) error <span class="cov8" title="1">{
+        // We dont handle XA ROLLBACK
+        if strings.Contains(string(e.Query), "XA ROLLBACK") </span><span class="cov0" title="0">{
+                h.shift.panicMe("shift.handler.unsupported.XAQueryEvent[%+v]", e)
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (h *EventHandler) WaitWorkerDone() <span class="cov8" title="1">{
+        h.wg.Wait()
+}</span>
+
+func (h *EventHandler) execute(conn *client.Conn, keep bool, query *Query) <span class="cov8" title="1">{
+        sql := query.sql
+        log := h.log
+        shift := h.shift
+        pool := h.shift.toPool
+
+        switch query.typ </span>{
+        case QueryType_INSERT, QueryType_DELETE, QueryType_UPDATE:<span class="cov8" title="1">
+                </span><span class="cov8" title="1">{
+                        execFn := func() </span><span class="cov8" title="1">{
+                                if _, err := conn.Execute(sql); err != nil </span><span class="cov8" title="1">{
+                                        if query.skipError </span><span class="cov8" title="1">{
+                                                log.Error("shift.execute.sql[%s].error:%+v", sql, err)
+                                        }</span> else<span class="cov0" title="0"> {
+                                                shift.panicMe("shift.execute.sql[%s].error:%+v", sql, err)
+                                        }</span>
+                                }
+                        }
+
+                        <span class="cov8" title="1">execFn()
+                        if !keep </span><span class="cov8" title="1">{
+                                pool.Put(conn)
+                        }</span>
+                }
+        }
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "encoding/json"
+        "fmt"
+        "io/ioutil"
+        "net/http"
+        "strings"
+)
+
+// makeSimpleRequest used to make a simple http request.
+func makeSimpleRequest(method string, url string, payload interface{}) (*http.Request, error) <span class="cov8" title="1">{
+        var data string
+
+        if payload != nil </span><span class="cov8" title="1">{
+                b, err := json.Marshal(payload)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov8" title="1">data = fmt.Sprintf("%s", b)</span>
+        }
+
+        <span class="cov8" title="1">r, err := http.NewRequest(method, url, strings.NewReader(data))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        //r.Header.Set("Accept-Encoding", "gzip")
+        <span class="cov8" title="1">if payload != nil </span><span class="cov8" title="1">{
+                r.Header.Set("Content-Type", "application/json")
+        }</span>
+        <span class="cov8" title="1">return r, nil</span>
+}
+
+func httpDo(method string, url string, payload interface{}) (*http.Response, func(), error) <span class="cov8" title="1">{
+        req, err := makeSimpleRequest(method, url, payload)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, nil, err
+        }</span>
+
+        <span class="cov8" title="1">client := &amp;http.Client{}
+        resp, err := client.Do(req)
+        return resp, func() </span><span class="cov8" title="1">{
+                if resp != nil &amp;&amp; resp.Body != nil </span><span class="cov8" title="1">{
+                        resp.Body.Close()
+                }</span>
+        }, err
+}
+
+func HTTPPost(url string, payload interface{}) (*http.Response, func(), error) <span class="cov8" title="1">{
+        return httpDo("POST", url, payload)
+}</span>
+
+func HTTPPut(url string, payload interface{}) (*http.Response, func(), error) <span class="cov8" title="1">{
+        return httpDo("PUT", url, payload)
+}</span>
+
+func HTTPReadBody(resp *http.Response) string <span class="cov8" title="1">{
+        if resp != nil &amp;&amp; resp.Body != nil </span><span class="cov8" title="1">{
+                if bodyBytes, err := ioutil.ReadAll(resp.Body); err != nil </span><span class="cov0" title="0">{
+                        return err.Error()
+                }</span> else<span class="cov8" title="1"> {
+                        return string(bodyBytes)
+                }</span>
+        }
+        <span class="cov0" title="0">return ""</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "fmt"
+        "strings"
+
+        "github.com/siddontang/go-mysql/canal"
+        "github.com/siddontang/go-mysql/client"
+)
+
+func (h *EventHandler) InsertRow(e *canal.RowsEvent, systemTable bool) <span class="cov8" title="1">{
+        var conn *client.Conn
+        cfg := h.shift.cfg
+        h.wg.Add(1)
+
+        executeFunc := func(conn *client.Conn) </span><span class="cov8" title="1">{
+                defer h.wg.Done()
+                var keep = true
+
+                for i, row := range e.Rows </span><span class="cov8" title="1">{
+                        var values []string
+
+                        // keep connection in the loop, just put conn to pool when execute the last row
+                        if (i + 1) == len(e.Rows) </span><span class="cov8" title="1">{
+                                keep = false
+                        }</span>
+
+                        <span class="cov8" title="1">for idx, v := range row </span><span class="cov8" title="1">{
+                                values = append(values, h.ParseValue(e, idx, v))
+                        }</span>
+
+                        <span class="cov8" title="1">query := &amp;Query{
+                                sql:       fmt.Sprintf("insert into `%s`.`%s` values (%s)", cfg.ToDatabase, cfg.ToTable, strings.Join(values, ",")),
+                                typ:       QueryType_INSERT,
+                                skipError: systemTable,
+                        }
+                        h.execute(conn, keep, query)</span>
+                }
+        }
+
+        <span class="cov8" title="1">if conn = h.shift.toPool.Get(); conn == nil </span><span class="cov0" title="0">{
+                h.shift.panicMe("shift.insert.get.to.conn.nil.error")
+        }</span>
+        // Binlog sync.
+        <span class="cov8" title="1">if e.Header != nil </span><span class="cov8" title="1">{
+                executeFunc(conn)
+        }</span> else<span class="cov8" title="1"> {
+                // Backend worker for mysqldump.
+                go func(conn *client.Conn) </span><span class="cov8" title="1">{
+                        executeFunc(conn)
+                }</span>(conn)
+        }
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "context"
+        "fmt"
+        "net/http"
+        "strings"
+        "time"
+        "xlog"
+
+        "github.com/ant0ine/go-json-rest/rest"
+)
+
+var (
+        restfulPort = 8181
+
+        // Config for normal shift.
+        mockCfg = &amp;Config{
+                From:         "127.0.0.1:3306",
+                FromUser:     "root",
+                FromDatabase: "shift_test_from",
+                FromTable:    "t1",
+
+                To:         "127.0.0.1:3307",
+                ToUser:     "root",
+                ToDatabase: "shift_test_to",
+                ToTable:    "t1",
+
+                Cleanup:   true,
+                Threads:   16,
+                Behinds:   256,
+                MySQLDump: "mysqldump",
+                RadonURL:  fmt.Sprintf("http://127.0.0.1:%d", restfulPort),
+                Checksum:  true,
+        }
+
+        // Config for system (mysql) shift.
+        mockCfgMysql = &amp;Config{
+                From:         "127.0.0.1:3306",
+                FromUser:     "root",
+                FromDatabase: "mysql",
+                FromTable:    "user",
+
+                To:         "127.0.0.1:3307",
+                ToUser:     "root",
+                ToDatabase: "mysql",
+                ToTable:    "userx",
+
+                Cleanup:   true,
+                Threads:   16,
+                Behinds:   256,
+                MySQLDump: "mysqldump",
+                RadonURL:  fmt.Sprintf("http://127.0.0.1:%d", restfulPort),
+                Checksum:  false,
+        }
+
+        // Config for xa shift.
+        mockCfgXa = &amp;Config{
+                From:         "127.0.0.1:3306",
+                FromUser:     "root",
+                FromDatabase: "shift_test_from",
+                FromTable:    "t1",
+
+                To:         "127.0.0.1:3307",
+                ToUser:     "root",
+                ToDatabase: "shift_test_to",
+                ToTable:    "t1",
+
+                Cleanup:   true,
+                Threads:   16,
+                Behinds:   256,
+                MySQLDump: "mysqldump",
+                RadonURL:  fmt.Sprintf("http://127.0.0.1:%d", restfulPort),
+                Checksum:  true,
+        }
+
+        // Config for ddl shift.
+        mockCfgDDL = &amp;Config{
+                From:         "127.0.0.1:3306",
+                FromUser:     "root",
+                FromDatabase: "shift_test_from",
+                FromTable:    "t1",
+
+                To:         "127.0.0.1:3306",
+                ToUser:     "root",
+                ToDatabase: "shift_test_to",
+                ToTable:    "t1",
+
+                Cleanup:   true,
+                Threads:   16,
+                Behinds:   256,
+                MySQLDump: "mysqldump",
+                RadonURL:  fmt.Sprintf("http://127.0.0.1:%d", restfulPort),
+                Checksum:  false,
+        }
+)
+
+func mockShift(log *xlog.Log, cfg *Config, hasPK bool, initData bool, readonlyHanler mockHandler, shardshiftHandler mockHandler, throttleHandler mockHandler) (*Shift, func()) <span class="cov8" title="1">{
+        h := mockHttp(log, restfulPort, readonlyHanler, shardshiftHandler, throttleHandler)
+        shift := NewShift(log, cfg)
+
+        // Prepare connections.
+        </span><span class="cov8" title="1">{
+                if err := shift.prepareConnection(); err != nil </span><span class="cov0" title="0">{
+                        log.Panicf("mock.shift.prepare.connection.error:%+v", err)
+                }</span>
+        }
+
+        // Prepare the from database and table.
+        <span class="cov8" title="1">{
+                fromConn := shift.fromPool.Get()
+                if fromConn == nil </span><span class="cov0" title="0">{
+                        panic("shift.mock.get.from.conn.nil.error")</span>
+                }
+                <span class="cov8" title="1">defer shift.fromPool.Put(fromConn)
+                toConn := shift.toPool.Get()
+                if toConn == nil </span><span class="cov0" title="0">{
+                        panic("shift.mock.get.to.conn.nil.error")</span>
+                }
+                <span class="cov8" title="1">defer shift.toPool.Put(toConn)
+
+                // Cleanup To table first.
+                </span><span class="cov8" title="1">{
+                        sql := fmt.Sprintf("drop table if exists `%s`.`%s`", cfg.ToDatabase, cfg.ToTable)
+                        if _, err := toConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                                log.Panicf("mock.drop.to.table.error:%+v", err)
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if _, isSystem := sysDatabases[strings.ToLower(cfg.FromDatabase)]; !isSystem </span><span class="cov8" title="1">{
+                        // Cleanup From table first.
+                        </span><span class="cov8" title="1">{
+                                sql := fmt.Sprintf("drop table if exists `%s`.`%s`", cfg.FromDatabase, cfg.FromTable)
+                                if _, err := fromConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                                        log.Panicf("mock.shift.drop.from.table.error:%+v", err)
+                                }</span>
+                        }
+
+                        // Create database on from.
+                        <span class="cov8" title="1">sql := fmt.Sprintf("create database if not exists `%s`", cfg.FromDatabase)
+                        if _, err := fromConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                                log.Panicf("mock.shift.prepare.database.error:%+v", err)
+                        }</span>
+
+                        // Create table on from.
+                        <span class="cov8" title="1">if hasPK </span><span class="cov8" title="1">{
+                                sql = fmt.Sprintf("create table `%s`.`%s`(a int primary key, b int, c varchar(200), d DOUBLE NULL DEFAULT NULL, e json DEFAULT NULL, f INT UNSIGNED DEFAULT NULL, g BIGINT DEFAULT NULL, h BIGINT UNSIGNED DEFAULT NULL, i TINYINT NULL, j TINYINT UNSIGNED DEFAULT NULL, k SMALLINT DEFAULT NULL, l SMALLINT UNSIGNED DEFAULT NULL, m MEDIUMINT DEFAULT NULL, n INT UNSIGNED DEFAULT NULL, o bit(1) default NULL, p text COLLATE utf8_bin, q longblob, r datetime DEFAULT NULL)", cfg.FromDatabase, cfg.FromTable)
+                        }</span> else<span class="cov8" title="1"> {
+                                sql = fmt.Sprintf("create table `%s`.`%s`(a int, b int, c varchar(200),  d DOUBLE NULL DEFAULT NULL, e json DEFAULT NULL, f INT UNSIGNED DEFAULT NULL, g BIGINT DEFAULT NULL, h BIGINT UNSIGNED DEFAULT NULL, i TINYINT NULL, j TINYINT UNSIGNED DEFAULT NULL, k SMALLINT DEFAULT NULL, l SMALLINT UNSIGNED DEFAULT NULL, m MEDIUMINT DEFAULT NULL, n INT UNSIGNED DEFAULT NULL, o bit(1) default NULL, p text COLLATE utf8_bin, q longblob, r datetime DEFAULT NULL)", cfg.FromDatabase, cfg.FromTable)
+                        }</span>
+                        <span class="cov8" title="1">if _, err := fromConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                                log.Panicf("mock.shift.prepare.database.error:%+v", err)
+                        }</span>
+
+                        <span class="cov8" title="1">if initData </span><span class="cov8" title="1">{
+                                for i := 100; i &lt; 108; i++ </span><span class="cov8" title="1">{
+                                        sql := fmt.Sprintf("insert into `%s`.`%s`(a,b,c,o,p,q,r) values(%d,%d,'%d', B'1', 0x6B313134363020666638303831383135646534373733633031356465343762353138653030303020E799BDE4BAAC2031302E3131362E32352E3137322C31312E312E31302E313420737061636520636F6E66696775726174696F6E207570646174656420737061636573207479706520676C6F62616C207374617475732063757272656E74206E616D65206B65792073706320686F6D65207061676520706167653A20762E31202833323831383229, 0x6B313134363020666638303831383135646534373733633031356465343762353138653030303020E799BDE4BAAC2031302E3131362E32352E3137322C31312E312E31302E313420737061636520636F6E66696775726174696F6E207570646174656420737061636573207479706520676C6F62616C207374617475732063757272656E74206E616D65206B65792073706320686F6D65207061676520706167653A20762E31202833323831383229, '2019-4-19 18:03:43')", shift.cfg.FromDatabase, shift.cfg.FromTable, i, i, i)
+                                        if _, err := fromConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                                                log.Panicf("mock.shift.prepare.datas.error:%+v", err)
+                                        }</span>
+                                }
+                        }
+                } else<span class="cov8" title="1"> {
+                        // Prepare mysql.userx(fakes for mysql.user) table on TO.
+                        sql := fmt.Sprintf("show create table `%s`.`%s`", cfg.FromDatabase, cfg.FromTable)
+                        r, err := fromConn.Execute(sql)
+                        if err != nil </span><span class="cov0" title="0">{
+                                log.Panicf("mock.prepare.mysql.userx.error:%+v", err)
+                        }</span>
+                        <span class="cov8" title="1">sql, _ = r.GetString(0, 1)
+                        sql = strings.Replace(sql, fmt.Sprintf("CREATE TABLE `%s`", cfg.FromTable), fmt.Sprintf("CREATE TABLE `%s`.`%s`", cfg.ToDatabase, cfg.ToTable), 1)
+                        if _, err = toConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                                log.Panicf("mock.prepare.mysql.userx.error:%+v", err)
+                        }</span>
+
+                        <span class="cov8" title="1">if initData </span><span class="cov8" title="1">{
+                                for i := 100; i &lt; 108; i++ </span><span class="cov8" title="1">{
+                                        sql := fmt.Sprintf(`insert into %s.%s values("%d", "%d","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","N","","","","",0,0,0,0,"mysql_native_password","*THISISNOTAVALIDPASSWORDTHATCANBEUSEDHERE","N","2017-06-22 17:37:18",NULL,"Y")`, shift.cfg.ToDatabase, shift.cfg.ToTable, i, i)
+                                        if _, err := toConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                                                log.Panicf("mock.shift.prepare.datas.error:%+v", err)
+                                        }</span>
+                                }
+                        }
+                }
+        }
+
+        // Prepare tables.
+        <span class="cov8" title="1">{
+                if err := shift.prepareTable(); err != nil </span><span class="cov0" title="0">{
+                        log.Panicf("mock.shift.prepare.table.error:%+v", err)
+                }</span>
+        }
+
+        // Prepare canal.
+        <span class="cov8" title="1">{
+                if err := shift.prepareCanal(); err != nil </span><span class="cov0" title="0">{
+                        log.Panicf("mock.shift.prepare.canal.error:%+v", err)
+                }</span>
+                <span class="cov8" title="1">time.Sleep(time.Millisecond * 100)</span>
+        }
+
+        // Prepare nearcheck.
+        <span class="cov8" title="1">{
+                if err := shift.behindsCheckStart(); err != nil </span><span class="cov0" title="0">{
+                        log.Panicf("mock.shift.behinds.check.error:%+v", err)
+                }</span>
+        }
+        <span class="cov8" title="1">return shift, func() </span><span class="cov8" title="1">{
+                shift.Close()
+                ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+                h.Shutdown(ctx)
+                time.Sleep(time.Millisecond * 100)
+        }</span>
+}
+
+func MockShift(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        return mockShift(log, mockCfg, hasPK, false, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+}</span>
+
+func MockShiftWithCleanup(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        mockCfg.Cleanup = true
+        return mockShift(log, mockCfg, hasPK, false, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+}</span>
+
+func MockShiftWithData(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        return mockShift(log, mockCfg, hasPK, true, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+}</span>
+
+func MockShiftXa(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        return mockShift(log, mockCfgXa, hasPK, false, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+}</span>
+
+func MockShiftDDL(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        return mockShift(log, mockCfgDDL, hasPK, false, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+}</span>
+
+func MockShiftMysqlTable(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        return mockShift(log, mockCfgMysql, hasPK, false, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+}</span>
+
+func MockShiftMysqlTableWithData(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        return mockShift(log, mockCfgMysql, hasPK, true, mockRadonReadonly, mockRadonShift, mockRadonThrottle)
+}</span>
+
+func MockShiftWithRadonReadonlyError(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        return mockShift(log, mockCfg, false, false, mockRadonReadonlyError, mockRadonShift, mockRadonThrottle)
+}</span>
+
+func MockShiftWithRadonShardRuleError(log *xlog.Log, hasPK bool) (*Shift, func()) <span class="cov8" title="1">{
+        return mockShift(log, mockCfg, false, false, mockRadonReadonly, mockRadonShiftError, mockRadonThrottle)
+}</span>
+
+// RESTful api.
+type mockHandler func(log *xlog.Log) rest.HandlerFunc
+
+func mockHttp(log *xlog.Log, port int, readonly mockHandler, shardshift mockHandler, throttle mockHandler) *http.Server <span class="cov8" title="1">{
+        httpAddr := fmt.Sprintf(":%d", port)
+        api := rest.NewApi()
+        api.Use(rest.DefaultDevStack...)
+
+        router, err := rest.MakeRouter(
+                rest.Put("/v1/radon/readonly", readonly(log)),
+                rest.Put("/v1/radon/throttle", throttle(log)),
+                rest.Post("/v1/shard/shift", shardshift(log)),
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                log.Panicf("mock.shift.rest.make.router.error:%+v", err)
+        }</span>
+        <span class="cov8" title="1">api.SetApp(router)
+        handlers := api.MakeHandler()
+        h := &amp;http.Server{Addr: httpAddr, Handler: handlers}
+        go func() </span><span class="cov8" title="1">{
+                if err := h.ListenAndServe(); err != nil </span><span class="cov8" title="1">{
+                        log.Error("mock.shift.rest.error:%+v", err)
+                        return
+                }</span>
+        }()
+        <span class="cov8" title="1">time.Sleep(time.Millisecond * 100)
+        return h</span>
+}
+
+var readonlyLast bool
+
+type readonlyParams struct {
+        ReadOnly bool `json:"readonly"`
+}
+
+func mockRadonReadonly(log *xlog.Log) rest.HandlerFunc <span class="cov8" title="1">{
+        f := func(w rest.ResponseWriter, r *rest.Request) </span><span class="cov8" title="1">{
+                p := readonlyParams{}
+                r.DecodeJsonPayload(&amp;p)
+                readonlyLast = p.ReadOnly
+                log.Info("mock.api.radon.readonly.call.req:%+v", p)
+        }</span>
+        <span class="cov8" title="1">return f</span>
+}
+
+var throttleLast int
+
+type throttleParams struct {
+        Limits int `json:"limits"`
+}
+
+func mockRadonThrottle(log *xlog.Log) rest.HandlerFunc <span class="cov8" title="1">{
+        f := func(w rest.ResponseWriter, r *rest.Request) </span><span class="cov8" title="1">{
+                p := throttleParams{}
+                r.DecodeJsonPayload(&amp;p)
+                throttleLast = p.Limits
+                log.Info("mock.api.radon.throttle.call.req:%+v", p)
+        }</span>
+        <span class="cov8" title="1">return f</span>
+}
+
+func mockRadonShift(log *xlog.Log) rest.HandlerFunc <span class="cov8" title="1">{
+        f := func(w rest.ResponseWriter, r *rest.Request) </span><span class="cov8" title="1">{
+                log.Info("mock.api.radon.rule.call")
+        }</span>
+        <span class="cov8" title="1">return f</span>
+}
+
+func mockRadonReadonlyError(log *xlog.Log) rest.HandlerFunc <span class="cov8" title="1">{
+        f := func(w rest.ResponseWriter, r *rest.Request) </span><span class="cov8" title="1">{
+                log.Info("mock.api.readonly.error.call")
+                readonlyLast = false
+                rest.Error(w, "mock.api.readonly.error", http.StatusInternalServerError)
+        }</span>
+        <span class="cov8" title="1">return f</span>
+}
+
+func mockRadonShiftError(log *xlog.Log) rest.HandlerFunc <span class="cov8" title="1">{
+        f := func(w rest.ResponseWriter, r *rest.Request) </span><span class="cov0" title="0">{
+                log.Info("mock.api.shift.error.call")
+                rest.Error(w, "mock.api.shift.error", http.StatusInternalServerError)
+        }</span>
+        <span class="cov8" title="1">return f</span>
+}
+
+func mockPanicMe(log *xlog.Log, format string, v ...interface{}) <span class="cov0" title="0">{
+        msg := fmt.Sprintf(format, v...)
+        log.Info("mock.panicme.fired, msg:%s", msg)
+        panic(1)</span>
+}
+
+func mockRecoverPanicMe(log *xlog.Log, format string, v ...interface{}) <span class="cov8" title="1">{
+        defer func() </span><span class="cov8" title="1">{
+                if x := recover(); x != nil </span><span class="cov8" title="1">{
+                        msg := fmt.Sprintf(format, v...)
+                        log.Info("mock.panicme.fired, msg:%s", msg)
+                }</span>
+        }()
+        <span class="cov8" title="1">panic(1)</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "fmt"
+
+        "github.com/siddontang/go-mysql/canal"
+        "github.com/siddontang/go-mysql/schema"
+)
+
+func (h *EventHandler) ParseValue(e *canal.RowsEvent, idx int, v interface{}) string <span class="cov8" title="1">{
+        if v == nil </span><span class="cov8" title="1">{
+                return fmt.Sprintf("NULL")
+        }</span>
+
+        <span class="cov8" title="1">if _, ok := v.([]byte); ok </span><span class="cov8" title="1">{
+                return fmt.Sprintf("%q", v)
+        }</span> else<span class="cov8" title="1"> {
+                switch </span>{
+                case e.Table.Columns[idx].Type == schema.TYPE_NUMBER:<span class="cov8" title="1">
+                        return fmt.Sprintf("%d", v)</span>
+                case e.Table.Columns[idx].Type == schema.TYPE_BIT:<span class="cov8" title="1">
+                        // Here we should add prefix "0x" for hex
+                        return fmt.Sprintf("0x%x", v)</span>
+                default:<span class="cov8" title="1">
+                        switch e.Table.Columns[idx].RawType </span>{
+                        case "tinyblob", "blob", "mediumblob", "longblob":<span class="cov8" title="1">
+                                // Here we should add prefix "0x" for hex
+                                return fmt.Sprintf("0x%x", v)</span>
+                        default:<span class="cov8" title="1">
+                                s := fmt.Sprintf("%v", v)
+                                return fmt.Sprintf("\"%s\"", EscapeBytes(StringToBytes(s)))</span>
+                        }
+                }
+        }
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "sync"
+        "xlog"
+
+        "github.com/siddontang/go-mysql/client"
+)
+
+// Blocked connection pool.
+type Pool struct {
+        log   *xlog.Log
+        conns chan *client.Conn
+        mu    sync.Mutex
+
+        host     string
+        user     string
+        password string
+}
+
+func NewPool(log *xlog.Log, cap int, host string, user string, password string) (*Pool, error) <span class="cov8" title="1">{
+        conns := make(chan *client.Conn, cap)
+        for i := 0; i &lt; cap; i++ </span><span class="cov8" title="1">{
+                to, err := client.Connect(host, user, password, "")
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error("shift.new.pool.connection.error:%+v", err)
+                        return nil, err
+                }</span>
+                <span class="cov8" title="1">conns &lt;- to</span>
+        }
+        <span class="cov8" title="1">log.Info("shift.pool[host:%v, cap:%d].done", host, cap)
+
+        return &amp;Pool{
+                log:      log,
+                conns:    conns,
+                host:     host,
+                user:     user,
+                password: password,
+        }, nil</span>
+}
+
+func (p *Pool) Get() *client.Conn <span class="cov8" title="1">{
+        log := p.log
+        var err error
+
+        conns := p.getConns()
+        if conns == nil </span><span class="cov8" title="1">{
+                log.Error("shift.get.conns.is.nil")
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">conn := &lt;-conns
+        if conn == nil </span><span class="cov8" title="1">{
+                log.Error("shift.get.conn.is.nil")
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">if err = conn.Ping(); err != nil </span><span class="cov0" title="0">{
+                log.Warning("shift.get.connection.was.bad, prepare.a.new.connection")
+                conn, err = client.Connect(p.host, p.user, p.password, "")
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error("shift.get.connection.error:%+v", err)
+                        return nil
+                }</span>
+        }
+        <span class="cov8" title="1">return conn</span>
+}
+
+func (p *Pool) Put(conn *client.Conn) <span class="cov8" title="1">{
+        log := p.log
+        conns := p.getConns()
+        if conns == nil </span><span class="cov8" title="1">{
+                log.Error("shift.put.conns.is.nil")
+                return
+        }</span>
+        <span class="cov8" title="1">conns &lt;- conn</span>
+}
+
+func (p *Pool) Close() <span class="cov8" title="1">{
+        log := p.log
+        p.mu.Lock()
+        defer p.mu.Unlock()
+
+        if p.conns == nil </span><span class="cov0" title="0">{
+                log.Error("shift.close.pool.conns.is.nil")
+        }</span>
+        <span class="cov8" title="1">close(p.conns)
+        for conn := range p.conns </span><span class="cov8" title="1">{
+                conn.Close()
+        }</span>
+        <span class="cov8" title="1">p.conns = nil</span>
+}
+
+func (p *Pool) getConns() chan *client.Conn <span class="cov8" title="1">{
+        p.mu.Lock()
+        defer p.mu.Unlock()
+        return p.conns
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "fmt"
+        "net/http"
+        "strings"
+        "time"
+)
+
+func (shift *Shift) setRadonReadOnly(v bool) error <span class="cov8" title="1">{
+        log := shift.log
+        cfg := shift.cfg
+        path := cfg.RadonURL + "/v1/radon/readonly"
+
+        type request struct {
+                Readonly bool `json:"readonly"`
+        }
+        req := &amp;request{
+                Readonly: v,
+        }
+        log.Info("shift.set.radon[%s].readonlly.req[%+v]", path, req)
+
+        resp, cleanup, err := HTTPPut(path, req)
+        defer cleanup()
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">if resp == nil || resp.StatusCode != http.StatusOK </span><span class="cov8" title="1">{
+                return fmt.Errorf("shift.set.radon.readonly[%s].response.error:%+s", path, HTTPReadBody(resp))
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (shift *Shift) setRadonRule() error <span class="cov8" title="1">{
+        log := shift.log
+        cfg := shift.cfg
+        path := cfg.RadonURL + "/v1/shard/shift"
+
+        if _, isSystem := sysDatabases[strings.ToLower(shift.cfg.FromDatabase)]; isSystem </span><span class="cov8" title="1">{
+                log.Info("shift.set.radon.rune.skip.system.table:[%s.%s]", shift.cfg.FromDatabase, shift.cfg.FromTable)
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">type request struct {
+                Database    string `json:"database"`
+                Table       string `json:"table"`
+                FromAddress string `json:"from-address"`
+                ToAddress   string `json:"to-address"`
+        }
+        req := &amp;request{
+                Database:    cfg.FromDatabase,
+                Table:       cfg.FromTable,
+                FromAddress: cfg.From,
+                ToAddress:   cfg.To,
+        }
+        log.Info("shift.set.radon[%s].rule.req[%+v]", path, req)
+
+        resp, cleanup, err := HTTPPost(path, req)
+        defer cleanup()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if resp == nil || resp.StatusCode != http.StatusOK </span><span class="cov0" title="0">{
+                return fmt.Errorf("shift.set.radon.shard.rule[%s].response.error:%+s", path, HTTPReadBody(resp))
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+var (
+        radon_limits_min = 500
+        radon_limits_max = 10000
+)
+
+func (shift *Shift) setRadonThrottle(factor float32) error <span class="cov8" title="1">{
+        log := shift.log
+        cfg := shift.cfg
+        path := cfg.RadonURL + "/v1/radon/throttle"
+
+        type request struct {
+                Limits int `json:"limits"`
+        }
+
+        // limits =0 means unlimits.
+        limits := int(float32(radon_limits_max) * factor)
+        if limits != 0 &amp;&amp; limits &lt; radon_limits_min </span><span class="cov0" title="0">{
+                limits = radon_limits_min
+        }</span>
+        <span class="cov8" title="1">req := &amp;request{
+                Limits: limits,
+        }
+        log.Info("shift.set.radon[%s].throttle.to.req[%+v].by.factor[%v].limits[%v]", path, req, factor, limits)
+
+        resp, cleanup, err := HTTPPut(path, req)
+        defer cleanup()
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">if resp == nil || resp.StatusCode != http.StatusOK </span><span class="cov0" title="0">{
+                return fmt.Errorf("shift.set.radon.throttle[%s].response.error:%+s", path, HTTPReadBody(resp))
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (shift *Shift) setRadon() <span class="cov8" title="1">{
+        log := shift.log
+
+        // 1. WaitUntilPos
+        </span><span class="cov8" title="1">{
+                masterPos := shift.masterPosition()
+                log.Info("shift.wait.until.pos[%#v]...", masterPos)
+                if err := shift.canal.WaitUntilPos(*masterPos, time.Hour*12); err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.set.radon.wait.until.pos[%#v].error:%+v", masterPos, err)
+                        return
+                }</span>
+                <span class="cov8" title="1">log.Info("shift.wait.until.pos.done...")</span>
+        }
+
+        // 2. Set radon to readonly.
+        <span class="cov8" title="1">{
+                log.Info("shift.set.radon.readonly...")
+                if err := shift.setRadonReadOnly(true); err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.set.radon.readonly.error:%+v", err)
+                        return
+                }</span>
+                <span class="cov8" title="1">log.Info("shift.set.radon.readonly.done...")</span>
+        }
+
+        // 3. Wait again.
+        <span class="cov8" title="1">{
+                masterPos := shift.masterPosition()
+                log.Info("shift.wait.until.pos.again[%#v]...", masterPos)
+                if err := shift.canal.WaitUntilPos(*masterPos, time.Second*300); err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.wait.until.pos.again[%#v].error:%+v", masterPos, err)
+                        return
+                }</span>
+                <span class="cov8" title="1">log.Info("shift.wait.until.pos.again.done...")</span>
+        }
+
+        // 4. Checksum table.
+        <span class="cov8" title="1">if shift.cfg.Checksum </span><span class="cov8" title="1">{
+                log.Info("shift.checksum.table...")
+                if err := shift.ChecksumTable(); err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.checksum.table.error:%+v", err)
+                        return
+                }</span>
+                <span class="cov8" title="1">log.Info("shift.checksum.table.done...")</span>
+        }
+
+        // 5. Set radon rule.
+        <span class="cov8" title="1">{
+                log.Info("shift.set.radon.rule...")
+                if err := shift.setRadonRule(); err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.set.radon.rule.error:%+v", err)
+                        return
+                }</span>
+                <span class="cov8" title="1">log.Info("shift.set.radon.rule.done...")</span>
+        }
+
+        // 6. Set radon to read/write.
+        <span class="cov8" title="1">{
+                log.Info("shift.set.radon.to.write...")
+                if err := shift.setRadonReadOnly(false); err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.set.radon.write.error:%+v", err)
+                        return
+                }</span>
+                <span class="cov8" title="1">log.Info("shift.set.radon.to.write.done...")</span>
+        }
+
+        // 7. Set radon throttle to unlimits.
+        <span class="cov8" title="1">{
+                log.Info("shift.set.radon.throttle.to.unlimits...")
+                if err := shift.setRadonThrottle(0); err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.set.radon.throttle.to.unlimits.error:%+v", err)
+                        return
+                }</span>
+                <span class="cov8" title="1">log.Info("shift.set.radon.throttle.to.unlimits.done...")</span>
+        }
+
+        // 8. Good, we have all done.
+        <span class="cov8" title="1">{
+                shift.done &lt;- true
+                shift.allDone = true
+                log.Info("shift.all.done...")
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "fmt"
+        "strings"
+        "time"
+        "xlog"
+
+        "github.com/siddontang/go-mysql/canal"
+        "github.com/siddontang/go-mysql/client"
+        "github.com/siddontang/go-mysql/mysql"
+)
+
+const (
+        // Millisecond
+        behindsDuration = 5000
+)
+
+type Shift struct {
+        log           *xlog.Log
+        cfg           *Config
+        toPool        *Pool
+        fromPool      *Pool
+        canal         *canal.Canal
+        behindsTicker *time.Ticker
+        done          chan bool
+        handler       *EventHandler
+        allDone       bool
+        panicHandler  func(log *xlog.Log, format string, v ...interface{})
+
+        canalStatus bool // true: run normal; false: get some exception
+}
+
+func NewShift(log *xlog.Log, cfg *Config) *Shift <span class="cov8" title="1">{
+        log.Info("shift.cfg:%#v", cfg)
+        return &amp;Shift{
+                log:           log,
+                cfg:           cfg,
+                done:          make(chan bool),
+                behindsTicker: time.NewTicker(time.Duration(behindsDuration) * time.Millisecond),
+                panicHandler:  logPanicHandler,
+                canalStatus:   true,
+        }
+}</span>
+
+func (shift *Shift) checkCanalStatus() bool <span class="cov8" title="1">{
+        return shift.canalStatus
+}</span>
+
+func (shift *Shift) SetCanalStatus(b bool) <span class="cov8" title="1">{
+        shift.canalStatus = b
+}</span>
+
+func (shift *Shift) prepareConnection() error <span class="cov8" title="1">{
+        log := shift.log
+        cfg := shift.cfg
+
+        fromPool, err := NewPool(log, 4, cfg.From, cfg.FromUser, cfg.FromPassword)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error("shift.start.from.connection.pool.error:%+v", err)
+                return err
+        }</span>
+        <span class="cov8" title="1">shift.fromPool = fromPool
+        log.Info("shift.[%s].connection.done...", cfg.From)
+
+        toPool, err := NewPool(log, cfg.Threads, cfg.To, cfg.ToUser, cfg.ToPassword)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error("shift.start.to.connection.pool.error:%+v", err)
+                return err
+        }</span>
+        <span class="cov8" title="1">shift.toPool = toPool
+        log.Info("shift.[%s].connection.done...", cfg.To)
+        log.Info("shift.prepare.connections.done...")
+        return nil</span>
+}
+
+func (shift *Shift) prepareTable() error <span class="cov8" title="1">{
+        log := shift.log
+        cfg := shift.cfg
+
+        // From connection.
+        fromConn := shift.fromPool.Get()
+        if fromConn == nil </span><span class="cov0" title="0">{
+                shift.panicMe("shift.get.from.conn.nil.error")
+        }</span>
+        <span class="cov8" title="1">defer shift.fromPool.Put(fromConn)
+
+        // To connection.
+        toConn := shift.toPool.Get()
+        if toConn == nil </span><span class="cov0" title="0">{
+                shift.panicMe("shift.get.to.conn.nil.error")
+        }</span>
+        <span class="cov8" title="1">defer shift.toPool.Put(toConn)
+
+        // Check the database is not system database and create them.
+        if _, isSystem := sysDatabases[strings.ToLower(cfg.ToDatabase)]; !isSystem </span><span class="cov8" title="1">{
+                log.Info("shift.prepare.database[%s]...", cfg.ToDatabase)
+                sql := fmt.Sprintf("select * from information_schema.tables where table_schema = '%s' limit 1", cfg.ToDatabase)
+                r, err := toConn.Execute(sql)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error("shift.check.database.sql[%s].error:%+v", sql, err)
+                        return err
+                }</span>
+
+                <span class="cov8" title="1">if r.RowNumber() == 0 </span><span class="cov8" title="1">{
+                        sql := fmt.Sprintf("create database if not exists `%s`", cfg.ToDatabase)
+                        if _, err := toConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                                log.Error("shift.create.database.sql[%s].error:%+v", sql, err)
+                                return err
+                        }</span>
+                        <span class="cov8" title="1">log.Info("shift.prepare.database.done...")</span>
+                } else<span class="cov0" title="0"> {
+                        log.Info("shift.database.exists...")
+                }</span>
+
+                <span class="cov8" title="1">log.Info("shift.prepare.table[%s/%s]...", cfg.ToDatabase, cfg.ToTable)
+                sql = fmt.Sprintf("show create table `%s`.`%s`", cfg.FromDatabase, cfg.FromTable)
+                r, err = fromConn.Execute(sql)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error("shift.show.[%s].create.table.sql[%s].error:%+v", cfg.From, sql, err)
+                        return err
+                }</span>
+                <span class="cov8" title="1">sql, err = r.GetString(0, 1)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error("shift.show.[%s].create.table.get.error:%+v", cfg.From, err)
+                        return err
+                }</span>
+                <span class="cov8" title="1">sql = strings.Replace(sql, fmt.Sprintf("CREATE TABLE `%s`", cfg.FromTable), fmt.Sprintf("CREATE TABLE `%s`.`%s`", cfg.ToDatabase, cfg.ToTable), 1)
+                if _, err := toConn.Execute(sql); err != nil </span><span class="cov0" title="0">{
+                        log.Error("shift.create.[%s].table.sql[%s].error:%+v", cfg.To, sql, err)
+                        return err
+                }</span>
+                <span class="cov8" title="1">log.Info("shift.prepare.table.done...")</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (shift *Shift) prepareCanal() error <span class="cov8" title="1">{
+        log := shift.log
+        conf := shift.cfg
+        cfg := canal.NewDefaultConfig()
+        cfg.Addr = conf.From
+        cfg.User = conf.FromUser
+        cfg.Password = conf.FromPassword
+        cfg.Dump.ExecutionPath = conf.MySQLDump
+        cfg.Dump.DiscardErr = false
+        cfg.Dump.TableDB = conf.FromDatabase
+        cfg.Dump.Tables = []string{conf.FromTable}
+
+        // canal
+        canal, err := canal.NewCanal(cfg)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error("shift.canal.new.error:%+v", err)
+                return err
+        }</span>
+
+        <span class="cov8" title="1">handler := NewEventHandler(log, shift)
+        canal.SetEventHandler(handler)
+        shift.handler = handler
+        shift.canal = canal
+        go func() </span><span class="cov8" title="1">{
+                if err := canal.Run(); err != nil </span><span class="cov8" title="1">{
+                        log.Error("shift.canal.run.error:%+v", err)
+                        shift.SetCanalStatus(false)
+                }</span>
+        }()
+        <span class="cov8" title="1">log.Info("shift.prepare.canal.done...")
+        return nil</span>
+}
+
+/*
+        mysql&gt; checksum table sbtest.sbtest1;
+        +----------------+-----------+
+        | Table          | Checksum  |
+        +----------------+-----------+
+        | sbtest.sbtest1 | 410139351 |
+        +----------------+-----------+
+*/
+// ChecksumTable ensure that FromTable and ToTable are consistent
+func (shift *Shift) ChecksumTable() error <span class="cov8" title="1">{
+        log := shift.log
+        var fromchecksum, tochecksum uint64
+
+        if _, isSystem := sysDatabases[strings.ToLower(shift.cfg.FromDatabase)]; isSystem </span><span class="cov0" title="0">{
+                log.Info("shift.checksum.table.skip.system.table[%s.%s]", shift.cfg.FromDatabase, shift.cfg.FromTable)
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">checksumFunc := func(t string, Conn *client.Conn, Database string, Table string, c chan uint64) </span><span class="cov8" title="1">{
+                sql := fmt.Sprintf("checksum table %s.%s", Database, Table)
+                r, err := Conn.Execute(sql)
+                if err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.checksum.%s.table[%s.%s].error:%+v", t, Database, Table, err)
+                }</span>
+
+                <span class="cov8" title="1">v, err := r.GetUint(0, 1)
+                if err != nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.get.%s.table[%s.%s].checksum.error:%+v", Database, Table, err)
+                }</span>
+                <span class="cov8" title="1">c &lt;- v</span>
+        }
+
+        <span class="cov8" title="1">fromchan := make(chan uint64, 1)
+        tochan := make(chan uint64, 1)
+
+        // execute checksum func
+        </span><span class="cov8" title="1">{
+                fromConn := shift.fromPool.Get()
+                if fromConn == nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.get.from.conn.nil.error")
+                }</span>
+                <span class="cov8" title="1">defer shift.fromPool.Put(fromConn)
+
+                toConn := shift.toPool.Get()
+                if toConn == nil </span><span class="cov0" title="0">{
+                        shift.panicMe("shift.get.to.conn.nil.error")
+                }</span>
+                <span class="cov8" title="1">defer shift.toPool.Put(toConn)
+
+                time.Sleep(time.Second * time.Duration(shift.cfg.WaitTimeBeforeChecksum))
+                maxRetryTimes := 30 // max retry 2.5 minutes
+                for i := 1; i &lt; maxRetryTimes; i++ </span><span class="cov8" title="1">{
+                        go checksumFunc("from", fromConn, shift.cfg.FromDatabase, shift.cfg.FromTable, fromchan)
+                        go checksumFunc("to", toConn, shift.cfg.ToDatabase, shift.cfg.ToTable, tochan)
+                        fromchecksum = &lt;-fromchan
+                        tochecksum = &lt;-tochan
+
+                        if fromchecksum != tochecksum </span><span class="cov0" title="0">{
+                                log.Info("shift.checksum.table.not.eq.and.retry.times[%+v]", i)
+                                time.Sleep(time.Second * 5)
+                                continue</span>
+                        } else<span class="cov8" title="1"> {
+                                log.Info("shift.checksum.table.from[%v.%v, crc:%v].to[%v.%v, crc:%v].ok", shift.cfg.FromDatabase, shift.cfg.FromTable, fromchecksum, shift.cfg.ToDatabase, shift.cfg.ToTable, tochecksum)
+                                break</span>
+                        }
+                }
+        }
+
+        <span class="cov8" title="1">if fromchecksum != tochecksum </span><span class="cov0" title="0">{
+                err := fmt.Errorf("checksum not equivalent: from-table[%v.%v] checksum is %v, to-table[%v.%v] checksum is %v", shift.cfg.FromDatabase, shift.cfg.FromTable, fromchecksum, shift.cfg.ToDatabase, shift.cfg.ToTable, tochecksum)
+                return err
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+/*
+   mysql&gt; show master status;
+   +------------------+-----------+--------------+------------------+------------------------------------------------+
+   | File             | Position  | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set                              |
+   +------------------+-----------+--------------+------------------+------------------------------------------------+
+   | mysql-bin.000002 | 112107994 |              |                  | 4dc59763-5431-11e7-90cb-5254281e57de:1-2561361 |
+   +------------------+-----------+--------------+------------------+------------------------------------------------+
+*/
+func (shift *Shift) masterPosition() *mysql.Position <span class="cov8" title="1">{
+        position := &amp;mysql.Position{}
+
+        fromConn := shift.fromPool.Get()
+        if fromConn == nil </span><span class="cov0" title="0">{
+                shift.panicMe("shift.get.from.conn.nil.error")
+        }</span>
+        <span class="cov8" title="1">defer shift.fromPool.Put(fromConn)
+
+        sql := "show master status"
+        r, err := fromConn.Execute(sql)
+        if err != nil </span><span class="cov0" title="0">{
+                shift.panicMe("shift.get.master[%s].postion.error:%+v", shift.cfg.From, err)
+                return position
+        }</span>
+
+        <span class="cov8" title="1">file, err := r.GetString(0, 0)
+        if err != nil </span><span class="cov0" title="0">{
+                shift.panicMe("shift.get.master[%s].file.error:%+v", shift.cfg.From, err)
+                return position
+        }</span>
+
+        <span class="cov8" title="1">pos, err := r.GetUint(0, 1)
+        if err != nil </span><span class="cov0" title="0">{
+                shift.panicMe("shift.get.master[%s].pos.error:%+v", shift.cfg.From, err)
+                return position
+        }</span>
+        <span class="cov8" title="1">position.Name = file
+        position.Pos = uint32(pos)
+        return position</span>
+}
+
+// 1. check mysqldump worker done
+// 2. check sync binlog pos
+func (shift *Shift) behindsCheckStart() error <span class="cov8" title="1">{
+        go func(s *Shift) </span><span class="cov8" title="1">{
+                log := s.log
+                log.Info("shift.dumping...")
+                // If some error happened during dumping, wait dump will be still set dump done.
+                &lt;-s.canal.WaitDumpDone()
+                // Wait dump worker done.
+                log.Info("shift.wait.dumper.background.worker...")
+                shift.handler.WaitWorkerDone()
+                log.Info("shift.wait.dumper.background.worker.done...")
+                prePos := s.canal.SyncedPosition()
+
+                for range s.behindsTicker.C </span><span class="cov8" title="1">{
+                        // If canal get something wrong during dumping or syncing data, we should log error
+                        if s.checkCanalStatus() </span><span class="cov8" title="1">{
+                                masterPos := s.masterPosition()
+                                syncPos := s.canal.SyncedPosition()
+                                behinds := int(masterPos.Pos - syncPos.Pos)
+                                diff := (syncPos.Pos - prePos.Pos)
+                                speed := diff / (behindsDuration / 1000)
+                                log.Info("--shift.check.behinds[%d]--master[%+v]--synced[%+v]--speed:%v events/second, diff:%v", behinds, masterPos, syncPos, speed, diff)
+                                if (masterPos.Name == syncPos.Name) &amp;&amp; (behinds &lt;= shift.cfg.Behinds) </span><span class="cov8" title="1">{
+                                        shift.setRadon()
+                                }</span> else<span class="cov8" title="1"> {
+                                        factor := float32(shift.cfg.Behinds+1) / float32(behinds+1)
+                                        log.Info("shift.set.throttle.behinds[%v].cfgbehinds[%v].factor[%v]", behinds, shift.cfg.Behinds, factor)
+                                        shift.setRadonThrottle(factor)
+                                }</span>
+                                <span class="cov8" title="1">prePos = syncPos</span>
+                        } else<span class="cov0" title="0"> {
+                                log.Error("shift.canal.get.error.during.dump.or.sync")
+                        }</span>
+                }
+        }(shift)
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Start used to start canal and behinds ticker.
+func (shift *Shift) Start() error <span class="cov8" title="1">{
+        if err := shift.prepareConnection(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if err := shift.prepareTable(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if err := shift.prepareCanal(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if err := shift.behindsCheckStart(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Close used to destroy all the resource.
+func (shift *Shift) Close() <span class="cov8" title="1">{
+        shift.behindsTicker.Stop()
+        shift.canal.Close()
+        shift.fromPool.Close()
+        shift.toPool.Close()
+        shift.Cleanup()
+}</span>
+
+func (shift *Shift) Done() chan bool <span class="cov8" title="1">{
+        return shift.done
+}</span>
+
+func (shift *Shift) panicMe(format string, v ...interface{}) <span class="cov8" title="1">{
+        shift.Cleanup()
+        shift.panicHandler(shift.log, format, v)
+}</span>
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "reflect"
+        "unsafe"
+)
+
+// BytesToString casts slice to string without copy
+func BytesToString(b []byte) (s string) <span class="cov8" title="1">{
+        if len(b) == 0 </span><span class="cov8" title="1">{
+                return ""
+        }</span>
+
+        <span class="cov8" title="1">bh := (*reflect.SliceHeader)(unsafe.Pointer(&amp;b))
+        sh := reflect.StringHeader{Data: bh.Data, Len: bh.Len}
+
+        return *(*string)(unsafe.Pointer(&amp;sh))</span>
+}
+
+// StringToBytes casts string to slice without copy
+func StringToBytes(s string) []byte <span class="cov8" title="1">{
+        if len(s) == 0 </span><span class="cov8" title="1">{
+                return []byte{}
+        }</span>
+
+        <span class="cov8" title="1">sh := (*reflect.StringHeader)(unsafe.Pointer(&amp;s))
+        bh := reflect.SliceHeader{Data: sh.Data, Len: sh.Len, Cap: sh.Len}
+
+        return *(*[]byte)(unsafe.Pointer(&amp;bh))</span>
+}
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">/*
+ * Shift
+ *
+ * Copyright (c) 2017 QingCloud.com.
+ * All rights reserved.
+ *
+ */
+
+package shift
+
+import (
+        "fmt"
+        "strings"
+
+        "github.com/siddontang/go-mysql/canal"
+        "github.com/siddontang/go-mysql/client"
+)
+
+func (h *EventHandler) UpdateRow(e *canal.RowsEvent) <span class="cov8" title="1">{
+        cfg := h.shift.cfg
+        var conn *client.Conn
+
+        h.wg.Add(1)
+        executeFunc := func(conn *client.Conn) </span><span class="cov8" title="1">{
+                defer h.wg.Done()
+                var keep = true
+
+                rows := e.Rows
+                pks := e.Table.PKColumns
+                for i := 0; i &lt; len(rows); i += 2 </span><span class="cov8" title="1">{
+                        var values []string
+                        var wheres []string
+
+                        // keep connection in the loop, just put conn to pool when execute the last row
+                        if (i + 2) == len(e.Rows) </span><span class="cov8" title="1">{
+                                keep = false
+                        }</span>
+
+                        // Old image.
+                        <span class="cov8" title="1">v1Row := rows[i]
+                        // New image.
+                        v2Row := rows[i+1]
+
+                        // We have pk columns.
+                        if len(pks) &gt; 0 </span><span class="cov8" title="1">{
+                                for _, pk := range pks </span><span class="cov8" title="1">{
+                                        v := v1Row[pk]
+                                        wheres = append(wheres, fmt.Sprintf("%s=%s", e.Table.Columns[pk].Name, h.ParseValue(e, pk, v)))
+                                }</span>
+                        }
+
+                        <span class="cov8" title="1">for i := range v2Row </span><span class="cov8" title="1">{
+                                v2 := v2Row[i]
+                                if v2 != nil </span><span class="cov8" title="1">{
+                                        values = append(values, fmt.Sprintf("%s=%s", e.Table.Columns[i].Name, h.ParseValue(e, i, v2)))
+                                }</span>
+
+                                <span class="cov8" title="1">if len(pks) == 0 </span><span class="cov8" title="1">{
+                                        v1 := v1Row[i]
+                                        if v1 != nil </span><span class="cov8" title="1">{
+                                                wheres = append(wheres, fmt.Sprintf("%s=%s", e.Table.Columns[i].Name, h.ParseValue(e, i, v1)))
+                                        }</span>
+                                }
+                        }
+                        <span class="cov8" title="1">query := &amp;Query{
+                                sql:       fmt.Sprintf("update `%s`.`%s` set %s where %s", cfg.ToDatabase, cfg.ToTable, strings.Join(values, ","), strings.Join(wheres, " and ")),
+                                typ:       QueryType_UPDATE,
+                                skipError: false,
+                        }
+                        h.execute(conn, keep, query)</span>
+                }
+        }
+
+        <span class="cov8" title="1">if conn = h.shift.toPool.Get(); conn == nil </span><span class="cov0" title="0">{
+                h.shift.panicMe("shift.update.get.to.conn.nil.error")
+        }</span>
+
+        <span class="cov8" title="1">executeFunc(conn)</span>
+}
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package canal
+
+import (
+        "context"
+        "fmt"
+        "io/ioutil"
+        "os"
+        "regexp"
+        "strconv"
+        "strings"
+        "sync"
+        "time"
+
+        "github.com/pingcap/errors"
+        "github.com/siddontang/go-log/log"
+        "github.com/siddontang/go-mysql/client"
+        "github.com/siddontang/go-mysql/dump"
+        "github.com/siddontang/go-mysql/mysql"
+        "github.com/siddontang/go-mysql/replication"
+        "github.com/siddontang/go-mysql/schema"
+)
+
+// Canal can sync your MySQL data into everywhere, like Elasticsearch, Redis, etc...
+// MySQL must open row format for binlog
+type Canal struct {
+        m sync.Mutex
+
+        cfg *Config
+
+        master     *masterInfo
+        dumper     *dump.Dumper
+        dumped     bool
+        dumpDoneCh chan struct{}
+        syncer     *replication.BinlogSyncer
+
+        eventHandler EventHandler
+
+        connLock sync.Mutex
+        conn     *client.Conn
+
+        tableLock          sync.RWMutex
+        tables             map[string]*schema.Table
+        errorTablesGetTime map[string]time.Time
+
+        tableMatchCache   map[string]bool
+        includeTableRegex []*regexp.Regexp
+        excludeTableRegex []*regexp.Regexp
+
+        ctx    context.Context
+        cancel context.CancelFunc
+}
+
+// canal will retry fetching unknown table's meta after UnknownTableRetryPeriod
+var UnknownTableRetryPeriod = time.Second * time.Duration(10)
+var ErrExcludedTable = errors.New("excluded table meta")
+
+func NewCanal(cfg *Config) (*Canal, error) <span class="cov8" title="1">{
+        c := new(Canal)
+        c.cfg = cfg
+
+        c.ctx, c.cancel = context.WithCancel(context.Background())
+
+        c.dumpDoneCh = make(chan struct{})
+        c.eventHandler = &amp;DummyEventHandler{}
+
+        c.tables = make(map[string]*schema.Table)
+        if c.cfg.DiscardNoMetaRowEvent </span><span class="cov0" title="0">{
+                c.errorTablesGetTime = make(map[string]time.Time)
+        }</span>
+        <span class="cov8" title="1">c.master = &amp;masterInfo{}
+
+        var err error
+
+        if err = c.prepareDumper(); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.Trace(err)
+        }</span>
+
+        <span class="cov8" title="1">if err = c.prepareSyncer(); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.Trace(err)
+        }</span>
+
+        <span class="cov8" title="1">if err := c.checkBinlogRowFormat(); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.Trace(err)
+        }</span>
+
+        // init table filter
+        <span class="cov8" title="1">if n := len(c.cfg.IncludeTableRegex); n &gt; 0 </span><span class="cov8" title="1">{
+                c.includeTableRegex = make([]*regexp.Regexp, n)
+                for i, val := range c.cfg.IncludeTableRegex </span><span class="cov8" title="1">{
+                        reg, err := regexp.Compile(val)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, errors.Trace(err)
+                        }</span>
+                        <span class="cov8" title="1">c.includeTableRegex[i] = reg</span>
+                }
+        }
+
+        <span class="cov8" title="1">if n := len(c.cfg.ExcludeTableRegex); n &gt; 0 </span><span class="cov8" title="1">{
+                c.excludeTableRegex = make([]*regexp.Regexp, n)
+                for i, val := range c.cfg.ExcludeTableRegex </span><span class="cov8" title="1">{
+                        reg, err := regexp.Compile(val)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, errors.Trace(err)
+                        }</span>
+                        <span class="cov8" title="1">c.excludeTableRegex[i] = reg</span>
+                }
+        }
+
+        <span class="cov8" title="1">if c.includeTableRegex != nil || c.excludeTableRegex != nil </span><span class="cov8" title="1">{
+                c.tableMatchCache = make(map[string]bool)
+        }</span>
+
+        <span class="cov8" title="1">return c, nil</span>
+}
+
+func (c *Canal) prepareDumper() error <span class="cov8" title="1">{
+        var err error
+        dumpPath := c.cfg.Dump.ExecutionPath
+        if len(dumpPath) == 0 </span><span class="cov0" title="0">{
+                // ignore mysqldump, use binlog only
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">if c.dumper, err = dump.NewDumper(dumpPath,
+                c.cfg.Addr, c.cfg.User, c.cfg.Password); err != nil </span><span class="cov0" title="0">{
+                return errors.Trace(err)
+        }</span>
+
+        <span class="cov8" title="1">if c.dumper == nil </span><span class="cov0" title="0">{
+                //no mysqldump, use binlog only
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">dbs := c.cfg.Dump.Databases
+        tables := c.cfg.Dump.Tables
+        tableDB := c.cfg.Dump.TableDB
+
+        if len(tables) == 0 </span><span class="cov0" title="0">{
+                c.dumper.AddDatabases(dbs...)
+        }</span> else<span class="cov8" title="1"> {
+                c.dumper.AddTables(tableDB, tables...)
+        }</span>
+
+        <span class="cov8" title="1">charset := c.cfg.Charset
+        c.dumper.SetCharset(charset)
+
+        c.dumper.SetWhere(c.cfg.Dump.Where)
+        c.dumper.SkipMasterData(c.cfg.Dump.SkipMasterData)
+        c.dumper.SetMaxAllowedPacket(c.cfg.Dump.MaxAllowedPacketMB)
+        c.dumper.SetProtocol(c.cfg.Dump.Protocol)
+        // Use hex blob for mysqldump
+        c.dumper.SetHexBlob(true)
+
+        for _, ignoreTable := range c.cfg.Dump.IgnoreTables </span><span class="cov0" title="0">{
+                if seps := strings.Split(ignoreTable, ","); len(seps) == 2 </span><span class="cov0" title="0">{
+                        c.dumper.AddIgnoreTables(seps[0], seps[1])
+                }</span>
+        }
+
+        <span class="cov8" title="1">if c.cfg.Dump.DiscardErr </span><span class="cov8" title="1">{
+                c.dumper.SetErrOut(ioutil.Discard)
+        }</span> else<span class="cov0" title="0"> {
+                c.dumper.SetErrOut(os.Stderr)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Run will first try to dump all data from MySQL master `mysqldump`,
+// then sync from the binlog position in the dump data.
+// It will run forever until meeting an error or Canal closed.
+func (c *Canal) Run() error <span class="cov8" title="1">{
+        return c.run()
+}</span>
+
+// RunFrom will sync from the binlog position directly, ignore mysqldump.
+func (c *Canal) RunFrom(pos mysql.Position) error <span class="cov0" title="0">{
+        c.master.Update(pos)
+
+        return c.Run()
+}</span>
+
+func (c *Canal) StartFromGTID(set mysql.GTIDSet) error <span class="cov0" title="0">{
+        c.master.UpdateGTIDSet(set)
+
+        return c.Run()
+}</span>
+
+// Dump all data from MySQL master `mysqldump`, ignore sync binlog.
+func (c *Canal) Dump() error <span class="cov0" title="0">{
+        if c.dumped </span><span class="cov0" title="0">{
+                return errors.New("the method Dump can't be called twice")
+        }</span>
+        <span class="cov0" title="0">c.dumped = true
+        defer close(c.dumpDoneCh)
+        return c.dump()</span>
+}
+
+func (c *Canal) run() error <span class="cov8" title="1">{
+        defer func() </span><span class="cov8" title="1">{
+                c.cancel()
+        }</span>()
+
+        <span class="cov8" title="1">c.master.UpdateTimestamp(uint32(time.Now().Unix()))
+
+        if !c.dumped </span><span class="cov8" title="1">{
+                c.dumped = true
+
+                err := c.tryDump()
+                close(c.dumpDoneCh)
+
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Errorf("canal dump mysql err: %v", err)
+                        return errors.Trace(err)
+                }</span>
+        }
+
+        <span class="cov8" title="1">if err := c.runSyncBinlog(); err != nil </span><span class="cov8" title="1">{
+                log.Errorf("canal start sync binlog err: %v", err)
+                return errors.Trace(err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (c *Canal) Close() <span class="cov8" title="1">{
+        log.Infof("closing canal")
+
+        c.m.Lock()
+        defer c.m.Unlock()
+
+        c.cancel()
+        c.connLock.Lock()
+        c.conn.Close()
+        c.conn = nil
+        c.connLock.Unlock()
+        c.syncer.Close()
+
+        c.eventHandler.OnPosSynced(c.master.Position(), true)
+}</span>
+
+func (c *Canal) WaitDumpDone() &lt;-chan struct{} <span class="cov8" title="1">{
+        return c.dumpDoneCh
+}</span>
+
+func (c *Canal) Ctx() context.Context <span class="cov0" title="0">{
+        return c.ctx
+}</span>
+
+func (c *Canal) checkTableMatch(key string) bool <span class="cov8" title="1">{
+        // no filter, return true
+        if c.tableMatchCache == nil </span><span class="cov0" title="0">{
+                return true
+        }</span>
+
+        <span class="cov8" title="1">c.tableLock.RLock()
+        rst, ok := c.tableMatchCache[key]
+        c.tableLock.RUnlock()
+        if ok </span><span class="cov8" title="1">{
+                // cache hit
+                return rst
+        }</span>
+        <span class="cov8" title="1">matchFlag := false
+        // check include
+        if c.includeTableRegex != nil </span><span class="cov8" title="1">{
+                for _, reg := range c.includeTableRegex </span><span class="cov8" title="1">{
+                        if reg.MatchString(key) </span><span class="cov8" title="1">{
+                                matchFlag = true
+                                break</span>
+                        }
+                }
+        }
+        // check exclude
+        <span class="cov8" title="1">if matchFlag &amp;&amp; c.excludeTableRegex != nil </span><span class="cov8" title="1">{
+                for _, reg := range c.excludeTableRegex </span><span class="cov8" title="1">{
+                        if reg.MatchString(key) </span><span class="cov8" title="1">{
+                                matchFlag = false
+                                break</span>
+                        }
+                }
+        }
+        <span class="cov8" title="1">c.tableLock.Lock()
+        c.tableMatchCache[key] = matchFlag
+        c.tableLock.Unlock()
+        return matchFlag</span>
+}
+
+func (c *Canal) GetTable(db string, table string) (*schema.Table, error) <span class="cov8" title="1">{
+        key := fmt.Sprintf("%s.%s", db, table)
+        // if table is excluded, return error and skip parsing event or dump
+        if !c.checkTableMatch(key) </span><span class="cov8" title="1">{
+                return nil, ErrExcludedTable
+        }</span>
+        <span class="cov8" title="1">c.tableLock.RLock()
+        t, ok := c.tables[key]
+        c.tableLock.RUnlock()
+
+        if ok </span><span class="cov8" title="1">{
+                return t, nil
+        }</span>
+
+        <span class="cov8" title="1">if c.cfg.DiscardNoMetaRowEvent </span><span class="cov0" title="0">{
+                c.tableLock.RLock()
+                lastTime, ok := c.errorTablesGetTime[key]
+                c.tableLock.RUnlock()
+                if ok &amp;&amp; time.Now().Sub(lastTime) &lt; UnknownTableRetryPeriod </span><span class="cov0" title="0">{
+                        return nil, schema.ErrMissingTableMeta
+                }</span>
+        }
+
+        <span class="cov8" title="1">t, err := schema.NewTable(c, db, table)
+        if err != nil </span><span class="cov8" title="1">{
+                // check table not exists
+                if ok, err1 := schema.IsTableExist(c, db, table); err1 == nil &amp;&amp; !ok </span><span class="cov8" title="1">{
+                        return nil, schema.ErrTableNotExist
+                }</span>
+                // work around : RDS HAHeartBeat
+                // ref : https://github.com/alibaba/canal/blob/master/parse/src/main/java/com/alibaba/otter/canal/parse/inbound/mysql/dbsync/LogEventConvert.java#L385
+                // issue : https://github.com/alibaba/canal/issues/222
+                // This is a common error in RDS that canal can't get HAHealthCheckSchema's meta, so we mock a table meta.
+                // If canal just skip and log error, as RDS HA heartbeat interval is very short, so too many HAHeartBeat errors will be logged.
+                <span class="cov0" title="0">if key == schema.HAHealthCheckSchema </span><span class="cov0" title="0">{
+                        // mock ha_health_check meta
+                        ta := &amp;schema.Table{
+                                Schema:  db,
+                                Name:    table,
+                                Columns: make([]schema.TableColumn, 0, 2),
+                                Indexes: make([]*schema.Index, 0),
+                        }
+                        ta.AddColumn("id", "bigint(20)", "", "")
+                        ta.AddColumn("type", "char(1)", "", "")
+                        c.tableLock.Lock()
+                        c.tables[key] = ta
+                        c.tableLock.Unlock()
+                        return ta, nil
+                }</span>
+                // if DiscardNoMetaRowEvent is true, we just log this error
+                <span class="cov0" title="0">if c.cfg.DiscardNoMetaRowEvent </span><span class="cov0" title="0">{
+                        c.tableLock.Lock()
+                        c.errorTablesGetTime[key] = time.Now()
+                        c.tableLock.Unlock()
+                        // log error and return ErrMissingTableMeta
+                        log.Errorf("canal get table meta err: %v", errors.Trace(err))
+                        return nil, schema.ErrMissingTableMeta
+                }</span>
+                <span class="cov0" title="0">return nil, err</span>
+        }
+
+        <span class="cov8" title="1">c.tableLock.Lock()
+        c.tables[key] = t
+        if c.cfg.DiscardNoMetaRowEvent </span><span class="cov0" title="0">{
+                // if get table info success, delete this key from errorTablesGetTime
+                delete(c.errorTablesGetTime, key)
+        }</span>
+        <span class="cov8" title="1">c.tableLock.Unlock()
+
+        return t, nil</span>
+}
+
+// ClearTableCache clear table cache
+func (c *Canal) ClearTableCache(db []byte, table []byte) <span class="cov8" title="1">{
+        key := fmt.Sprintf("%s.%s", db, table)
+        c.tableLock.Lock()
+        delete(c.tables, key)
+        if c.cfg.DiscardNoMetaRowEvent </span><span class="cov0" title="0">{
+                delete(c.errorTablesGetTime, key)
+        }</span>
+        <span class="cov8" title="1">c.tableLock.Unlock()</span>
+}
+
+// CheckBinlogRowImage checks MySQL binlog row image, must be in FULL, MINIMAL, NOBLOB
+func (c *Canal) CheckBinlogRowImage(image string) error <span class="cov0" title="0">{
+        // need to check MySQL binlog row image? full, minimal or noblob?
+        // now only log
+        if c.cfg.Flavor == mysql.MySQLFlavor </span><span class="cov0" title="0">{
+                if res, err := c.Execute(`SHOW GLOBAL VARIABLES LIKE "binlog_row_image"`); err != nil </span><span class="cov0" title="0">{
+                        return errors.Trace(err)
+                }</span> else<span class="cov0" title="0"> {
+                        // MySQL has binlog row image from 5.6, so older will return empty
+                        rowImage, _ := res.GetString(0, 1)
+                        if rowImage != "" &amp;&amp; !strings.EqualFold(rowImage, image) </span><span class="cov0" title="0">{
+                                return errors.Errorf("MySQL uses %s binlog row image, but we want %s", rowImage, image)
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (c *Canal) checkBinlogRowFormat() error <span class="cov8" title="1">{
+        res, err := c.Execute(`SHOW GLOBAL VARIABLES LIKE "binlog_format";`)
+        if err != nil </span><span class="cov0" title="0">{
+                return errors.Trace(err)
+        }</span> else<span class="cov8" title="1"> if f, _ := res.GetString(0, 1); f != "ROW" </span><span class="cov0" title="0">{
+                return errors.Errorf("binlog must ROW format, but %s now", f)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func (c *Canal) prepareSyncer() error <span class="cov8" title="1">{
+        cfg := replication.BinlogSyncerConfig{
+                ServerID:             c.cfg.ServerID,
+                Flavor:               c.cfg.Flavor,
+                User:                 c.cfg.User,
+                Password:             c.cfg.Password,
+                Charset:              c.cfg.Charset,
+                HeartbeatPeriod:      c.cfg.HeartbeatPeriod,
+                ReadTimeout:          c.cfg.ReadTimeout,
+                UseDecimal:           c.cfg.UseDecimal,
+                ParseTime:            c.cfg.ParseTime,
+                SemiSyncEnabled:      c.cfg.SemiSyncEnabled,
+                MaxReconnectAttempts: c.cfg.MaxReconnectAttempts,
+        }
+
+        if strings.Contains(c.cfg.Addr, "/") </span><span class="cov0" title="0">{
+                cfg.Host = c.cfg.Addr
+        }</span> else<span class="cov8" title="1"> {
+                seps := strings.Split(c.cfg.Addr, ":")
+                if len(seps) != 2 </span><span class="cov0" title="0">{
+                        return errors.Errorf("invalid mysql addr format %s, must host:port", c.cfg.Addr)
+                }</span>
+
+                <span class="cov8" title="1">port, err := strconv.ParseUint(seps[1], 10, 16)
+                if err != nil </span><span class="cov0" title="0">{
+                        return errors.Trace(err)
+                }</span>
+
+                <span class="cov8" title="1">cfg.Host = seps[0]
+                cfg.Port = uint16(port)</span>
+        }
+
+        <span class="cov8" title="1">c.syncer = replication.NewBinlogSyncer(cfg)
+
+        return nil</span>
+}
+
+// Execute a SQL
+func (c *Canal) Execute(cmd string, args ...interface{}) (rr *mysql.Result, err error) <span class="cov8" title="1">{
+        c.connLock.Lock()
+        defer c.connLock.Unlock()
+
+        retryNum := 3
+        for i := 0; i &lt; retryNum; i++ </span><span class="cov8" title="1">{
+                if c.conn == nil </span><span class="cov8" title="1">{
+                        c.conn, err = client.Connect(c.cfg.Addr, c.cfg.User, c.cfg.Password, "")
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, errors.Trace(err)
+                        }</span>
+                }
+
+                <span class="cov8" title="1">rr, err = c.conn.Execute(cmd, args...)
+                if err != nil &amp;&amp; !mysql.ErrorEqual(err, mysql.ErrBadConn) </span><span class="cov8" title="1">{
+                        return
+                }</span> else<span class="cov8" title="1"> if mysql.ErrorEqual(err, mysql.ErrBadConn) </span><span class="cov0" title="0">{
+                        c.conn.Close()
+                        c.conn = nil
+                        continue</span>
+                } else<span class="cov8" title="1"> {
+                        return
+                }</span>
+        }
+        <span class="cov0" title="0">return</span>
+}
+
+func (c *Canal) SyncedPosition() mysql.Position <span class="cov0" title="0">{
+        return c.master.Position()
+}</span>
+
+func (c *Canal) SyncedTimestamp() uint32 <span class="cov0" title="0">{
+        return c.master.timestamp
+}</span>
+
+func (c *Canal) SyncedGTIDSet() mysql.GTIDSet <span class="cov0" title="0">{
+        return c.master.GTIDSet()
+}</span>
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package canal
+
+import (
+        "io/ioutil"
+        "math/rand"
+        "time"
+
+        "github.com/BurntSushi/toml"
+        "github.com/pingcap/errors"
+        "github.com/siddontang/go-mysql/mysql"
+)
+
+type DumpConfig struct {
+        // mysqldump execution path, like mysqldump or /usr/bin/mysqldump, etc...
+        // If not set, ignore using mysqldump.
+        ExecutionPath string `toml:"mysqldump"`
+
+        // Will override Databases, tables is in database table_db
+        Tables  []string `toml:"tables"`
+        TableDB string   `toml:"table_db"`
+
+        Databases []string `toml:"dbs"`
+
+        // Ignore table format is db.table
+        IgnoreTables []string `toml:"ignore_tables"`
+
+        // Dump only selected records. Quotes are mandatory
+        Where string `toml:"where"`
+
+        // If true, discard error msg, else, output to stderr
+        DiscardErr bool `toml:"discard_err"`
+
+        // Set true to skip --master-data if we have no privilege to do
+        // 'FLUSH TABLES WITH READ LOCK'
+        SkipMasterData bool `toml:"skip_master_data"`
+
+        // Set to change the default max_allowed_packet size
+        MaxAllowedPacketMB int `toml:"max_allowed_packet_mb"`
+
+        // Set to change the default protocol to connect with
+        Protocol string `toml:"protocol"`
+}
+
+type Config struct {
+        Addr     string `toml:"addr"`
+        User     string `toml:"user"`
+        Password string `toml:"password"`
+
+        Charset         string        `toml:"charset"`
+        ServerID        uint32        `toml:"server_id"`
+        Flavor          string        `toml:"flavor"`
+        HeartbeatPeriod time.Duration `toml:"heartbeat_period"`
+        ReadTimeout     time.Duration `toml:"read_timeout"`
+
+        // IncludeTableRegex or ExcludeTableRegex should contain database name
+        // Only a table which matches IncludeTableRegex and dismatches ExcludeTableRegex will be processed
+        // eg, IncludeTableRegex : [".*\\.canal"], ExcludeTableRegex : ["mysql\\..*"]
+        //     this will include all database's 'canal' table, except database 'mysql'
+        // Default IncludeTableRegex and ExcludeTableRegex are empty, this will include all tables
+        IncludeTableRegex []string `toml:"include_table_regex"`
+        ExcludeTableRegex []string `toml:"exclude_table_regex"`
+
+        // discard row event without table meta
+        DiscardNoMetaRowEvent bool `toml:"discard_no_meta_row_event"`
+
+        Dump DumpConfig `toml:"dump"`
+
+        UseDecimal bool `toml:"use_decimal"`
+        ParseTime  bool `toml:"parse_time"`
+
+        // SemiSyncEnabled enables semi-sync or not.
+        SemiSyncEnabled bool `toml:"semi_sync_enabled"`
+
+        // Set to change the maximum number of attempts to re-establish a broken
+        // connection
+        MaxReconnectAttempts int `toml:"max_reconnect_attempts"`
+}
+
+func NewConfigWithFile(name string) (*Config, error) <span class="cov0" title="0">{
+        data, err := ioutil.ReadFile(name)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.Trace(err)
+        }</span>
+
+        <span class="cov0" title="0">return NewConfig(string(data))</span>
+}
+
+func NewConfig(data string) (*Config, error) <span class="cov0" title="0">{
+        var c Config
+
+        _, err := toml.Decode(data, &amp;c)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.Trace(err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;c, nil</span>
+}
+
+func NewDefaultConfig() *Config <span class="cov8" title="1">{
+        c := new(Config)
+
+        c.Addr = "127.0.0.1:3306"
+        c.User = "root"
+        c.Password = ""
+
+        c.Charset = mysql.DEFAULT_CHARSET
+        c.ServerID = uint32(rand.New(rand.NewSource(time.Now().Unix())).Intn(1000)) + 1001
+
+        c.Flavor = "mysql"
+
+        c.Dump.ExecutionPath = "mysqldump"
+        c.Dump.DiscardErr = true
+        c.Dump.SkipMasterData = false
+
+        return c
+}</span>
+</pre>
+		
+		<pre class="file" id="file15" style="display: none">package canal
+
+import (
+        "encoding/hex"
+        "fmt"
+        "strconv"
+        "strings"
+        "time"
+
+        "github.com/pingcap/errors"
+        "github.com/shopspring/decimal"
+        "github.com/siddontang/go-log/log"
+        "github.com/siddontang/go-mysql/mysql"
+        "github.com/siddontang/go-mysql/schema"
+)
+
+type dumpParseHandler struct {
+        c    *Canal
+        name string
+        pos  uint64
+        gset mysql.GTIDSet
+}
+
+func (h *dumpParseHandler) BinLog(name string, pos uint64) error <span class="cov8" title="1">{
+        h.name = name
+        h.pos = pos
+        return nil
+}</span>
+
+func (h *dumpParseHandler) Data(db string, table string, values []string) error <span class="cov8" title="1">{
+        if err := h.c.ctx.Err(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">tableInfo, err := h.c.GetTable(db, table)
+        if err != nil </span><span class="cov0" title="0">{
+                e := errors.Cause(err)
+                if e == ErrExcludedTable ||
+                        e == schema.ErrTableNotExist ||
+                        e == schema.ErrMissingTableMeta </span><span class="cov0" title="0">{
+                        return nil
+                }</span>
+                <span class="cov0" title="0">log.Errorf("get %s.%s information err: %v", db, table, err)
+                return errors.Trace(err)</span>
+        }
+
+        <span class="cov8" title="1">vs := make([]interface{}, len(values))
+
+        for i, v := range values </span><span class="cov8" title="1">{
+                if v == "NULL" </span><span class="cov0" title="0">{
+                        vs[i] = nil
+                }</span> else<span class="cov8" title="1"> if v == "_binary ''" </span><span class="cov0" title="0">{
+                        vs[i] = []byte{}
+                }</span> else<span class="cov8" title="1"> if v[0] != '\'' </span><span class="cov8" title="1">{
+                        if tableInfo.Columns[i].Type == schema.TYPE_NUMBER </span><span class="cov8" title="1">{
+                                n, err := strconv.ParseInt(v, 10, 64)
+                                if err != nil </span><span class="cov0" title="0">{
+                                        return fmt.Errorf("parse row %v at %d error %v, int expected", values, i, err)
+                                }</span>
+                                <span class="cov8" title="1">vs[i] = n</span>
+                        } else<span class="cov8" title="1"> if tableInfo.Columns[i].Type == schema.TYPE_FLOAT </span><span class="cov0" title="0">{
+                                f, err := strconv.ParseFloat(v, 64)
+                                if err != nil </span><span class="cov0" title="0">{
+                                        return fmt.Errorf("parse row %v at %d error %v, float expected", values, i, err)
+                                }</span>
+                                <span class="cov0" title="0">vs[i] = f</span>
+                        } else<span class="cov8" title="1"> if tableInfo.Columns[i].Type == schema.TYPE_DECIMAL </span><span class="cov0" title="0">{
+                                if h.c.cfg.UseDecimal </span><span class="cov0" title="0">{
+                                        d, err := decimal.NewFromString(v)
+                                        if err != nil </span><span class="cov0" title="0">{
+                                                return fmt.Errorf("parse row %v at %d error %v, decimal expected", values, i, err)
+                                        }</span>
+                                        <span class="cov0" title="0">vs[i] = d</span>
+                                } else<span class="cov0" title="0"> {
+                                        f, err := strconv.ParseFloat(v, 64)
+                                        if err != nil </span><span class="cov0" title="0">{
+                                                return fmt.Errorf("parse row %v at %d error %v, float expected", values, i, err)
+                                        }</span>
+                                        <span class="cov0" title="0">vs[i] = f</span>
+                                }
+                        } else<span class="cov8" title="1"> if strings.HasPrefix(v, "0x") </span><span class="cov8" title="1">{
+                                buf, err := hex.DecodeString(v[2:])
+                                if err != nil </span><span class="cov0" title="0">{
+                                        return fmt.Errorf("parse row %v at %d error %v, hex literal expected", values, i, err)
+                                }</span>
+                                <span class="cov8" title="1">vs[i] = string(buf)</span>
+                        } else<span class="cov0" title="0"> {
+                                return fmt.Errorf("parse row %v error, invalid type at %d", values, i)
+                        }</span>
+                } else<span class="cov8" title="1"> {
+                        vs[i] = v[1 : len(v)-1]
+                }</span>
+        }
+
+        <span class="cov8" title="1">events := newRowsEvent(tableInfo, InsertAction, [][]interface{}{vs}, nil)
+        return h.c.eventHandler.OnRow(events)</span>
+}
+
+func (c *Canal) AddDumpDatabases(dbs ...string) <span class="cov0" title="0">{
+        if c.dumper == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.dumper.AddDatabases(dbs...)</span>
+}
+
+func (c *Canal) AddDumpTables(db string, tables ...string) <span class="cov0" title="0">{
+        if c.dumper == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.dumper.AddTables(db, tables...)</span>
+}
+
+func (c *Canal) AddDumpIgnoreTables(db string, tables ...string) <span class="cov0" title="0">{
+        if c.dumper == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">c.dumper.AddIgnoreTables(db, tables...)</span>
+}
+
+func (c *Canal) dump() error <span class="cov8" title="1">{
+        if c.dumper == nil </span><span class="cov0" title="0">{
+                return errors.New("mysqldump does not exist")
+        }</span>
+
+        <span class="cov8" title="1">c.master.UpdateTimestamp(uint32(time.Now().Unix()))
+
+        h := &amp;dumpParseHandler{c: c}
+        // If users call StartFromGTID with empty position to start dumping with gtid,
+        // we record the current gtid position before dump starts.
+        //
+        // See tryDump() to see when dump is skipped.
+        if c.master.GTIDSet() != nil </span><span class="cov0" title="0">{
+                gset, err := c.GetMasterGTIDSet()
+                if err != nil </span><span class="cov0" title="0">{
+                        return errors.Trace(err)
+                }</span>
+                <span class="cov0" title="0">h.gset = gset</span>
+        }
+
+        <span class="cov8" title="1">if c.cfg.Dump.SkipMasterData </span><span class="cov0" title="0">{
+                pos, err := c.GetMasterPos()
+                if err != nil </span><span class="cov0" title="0">{
+                        return errors.Trace(err)
+                }</span>
+                <span class="cov0" title="0">log.Infof("skip master data, get current binlog position %v", pos)
+                h.name = pos.Name
+                h.pos = uint64(pos.Pos)</span>
+        }
+
+        <span class="cov8" title="1">start := time.Now()
+        log.Info("try dump MySQL and parse")
+        if err := c.dumper.DumpAndParse(h); err != nil </span><span class="cov0" title="0">{
+                return errors.Trace(err)
+        }</span>
+
+        <span class="cov8" title="1">pos := mysql.Position{Name: h.name, Pos: uint32(h.pos)}
+        c.master.Update(pos)
+        if err := c.eventHandler.OnPosSynced(pos, true); err != nil </span><span class="cov0" title="0">{
+                return errors.Trace(err)
+        }</span>
+        <span class="cov8" title="1">var startPos fmt.Stringer = pos
+        if h.gset != nil </span><span class="cov0" title="0">{
+                c.master.UpdateGTIDSet(h.gset)
+                startPos = h.gset
+        }</span>
+        <span class="cov8" title="1">log.Infof("dump MySQL and parse OK, use %0.2f seconds, start binlog replication at %s",
+                time.Now().Sub(start).Seconds(), startPos)
+        return nil</span>
+}
+
+func (c *Canal) tryDump() error <span class="cov8" title="1">{
+        pos := c.master.Position()
+        gset := c.master.GTIDSet()
+        if (len(pos.Name) &gt; 0 &amp;&amp; pos.Pos &gt; 0) ||
+                (gset != nil &amp;&amp; gset.String() != "") </span><span class="cov0" title="0">{
+                // we will sync with binlog name and position
+                log.Infof("skip dump, use last binlog replication pos %s or GTID set %v", pos, gset)
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">if c.dumper == nil </span><span class="cov0" title="0">{
+                log.Info("skip dump, no mysqldump")
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">return c.dump()</span>
+}
+</pre>
+		
+		<pre class="file" id="file16" style="display: none">package canal
+
+import (
+        "github.com/siddontang/go-mysql/mysql"
+        "github.com/siddontang/go-mysql/replication"
+)
+
+type EventHandler interface {
+        OnRotate(roateEvent *replication.RotateEvent) error
+        // OnTableChanged is called when the table is created, altered, renamed or dropped.
+        // You need to clear the associated data like cache with the table.
+        // It will be called before OnDDL.
+        OnTableChanged(schema string, table string) error
+        OnDDL(nextPos mysql.Position, queryEvent *replication.QueryEvent) error
+        OnRow(e *RowsEvent) error
+        OnXID(nextPos mysql.Position) error
+        OnGTID(gtid mysql.GTIDSet) error
+        // OnPosSynced Use your own way to sync position. When force is true, sync position immediately.
+        OnPosSynced(pos mysql.Position, force bool) error
+        OnXA(e *XAEvent) error
+        String() string
+}
+
+type DummyEventHandler struct {
+}
+
+func (h *DummyEventHandler) OnRotate(*replication.RotateEvent) error          <span class="cov8" title="1">{ return nil }</span>
+func (h *DummyEventHandler) OnTableChanged(schema string, table string) error <span class="cov8" title="1">{ return nil }</span>
+func (h *DummyEventHandler) OnDDL(nextPos mysql.Position, queryEvent *replication.QueryEvent) error <span class="cov8" title="1">{
+        return nil
+}</span>
+func (h *DummyEventHandler) OnRow(*RowsEvent) error                 <span class="cov0" title="0">{ return nil }</span>
+func (h *DummyEventHandler) OnXID(mysql.Position) error             <span class="cov8" title="1">{ return nil }</span>
+func (h *DummyEventHandler) OnGTID(mysql.GTIDSet) error             <span class="cov8" title="1">{ return nil }</span>
+func (h *DummyEventHandler) OnPosSynced(mysql.Position, bool) error <span class="cov8" title="1">{ return nil }</span>
+func (h *DummyEventHandler) OnXA(*XAEvent) error                    <span class="cov0" title="0">{ return nil }</span>
+func (h *DummyEventHandler) String() string                         <span class="cov0" title="0">{ return "DummyEventHandler" }</span>
+
+// `SetEventHandler` registers the sync handler, you must register your
+// own handler before starting Canal.
+func (c *Canal) SetEventHandler(h EventHandler) <span class="cov8" title="1">{
+        c.eventHandler = h
+}</span>
+</pre>
+		
+		<pre class="file" id="file17" style="display: none">package canal
+
+import (
+        "sync"
+
+        "github.com/siddontang/go-log/log"
+        "github.com/siddontang/go-mysql/mysql"
+)
+
+type masterInfo struct {
+        sync.RWMutex
+
+        pos mysql.Position
+
+        gset mysql.GTIDSet
+
+        timestamp uint32
+}
+
+func (m *masterInfo) Update(pos mysql.Position) <span class="cov8" title="1">{
+        log.Debugf("update master position %s", pos)
+
+        m.Lock()
+        m.pos = pos
+        m.Unlock()
+}</span>
+
+func (m *masterInfo) UpdateTimestamp(ts uint32) <span class="cov8" title="1">{
+        log.Debugf("update master timestamp %d", ts)
+
+        m.Lock()
+        m.timestamp = ts
+        m.Unlock()
+}</span>
+
+func (m *masterInfo) UpdateGTIDSet(gset mysql.GTIDSet) <span class="cov0" title="0">{
+        log.Debugf("update master gtid set %s", gset)
+
+        m.Lock()
+        m.gset = gset
+        m.Unlock()
+}</span>
+
+func (m *masterInfo) Position() mysql.Position <span class="cov8" title="1">{
+        m.RLock()
+        defer m.RUnlock()
+
+        return m.pos
+}</span>
+
+func (m *masterInfo) Timestamp() uint32 <span class="cov0" title="0">{
+        m.RLock()
+        defer m.RUnlock()
+
+        return m.timestamp
+}</span>
+
+func (m *masterInfo) GTIDSet() mysql.GTIDSet <span class="cov8" title="1">{
+        m.RLock()
+        defer m.RUnlock()
+
+        if m.gset == nil </span><span class="cov8" title="1">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">return m.gset.Clone()</span>
+}
+</pre>
+		
+		<pre class="file" id="file18" style="display: none">package canal
+
+import (
+        "fmt"
+
+        "github.com/siddontang/go-mysql/replication"
+        "github.com/siddontang/go-mysql/schema"
+)
+
+// The action name for sync.
+const (
+        UpdateAction = "update"
+        InsertAction = "insert"
+        DeleteAction = "delete"
+)
+
+// RowsEvent is the event for row replication.
+type RowsEvent struct {
+        Table  *schema.Table
+        Action string
+        // changed row list
+        // binlog has three update event version, v0, v1 and v2.
+        // for v1 and v2, the rows number must be even.
+        // Two rows for one event, format is [before update row, after update row]
+        // for update v0, only one row for a event, and we don't support this version.
+        Rows [][]interface{}
+        // Header can be used to inspect the event
+        Header *replication.EventHeader
+}
+
+func newRowsEvent(table *schema.Table, action string, rows [][]interface{}, header *replication.EventHeader) *RowsEvent <span class="cov8" title="1">{
+        e := new(RowsEvent)
+
+        e.Table = table
+        e.Action = action
+        e.Rows = rows
+        e.Header = header
+
+        e.handleUnsigned()
+
+        return e
+}</span>
+
+func (r *RowsEvent) handleUnsigned() <span class="cov8" title="1">{
+        // Handle Unsigned Columns here, for binlog replication, we can't know the integer is unsigned or not,
+        // so we use int type but this may cause overflow outside sometimes, so we must convert to the really .
+        // unsigned type
+        if len(r.Table.UnsignedColumns) == 0 </span><span class="cov8" title="1">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">for i := 0; i &lt; len(r.Rows); i++ </span><span class="cov0" title="0">{
+                for _, index := range r.Table.UnsignedColumns </span><span class="cov0" title="0">{
+                        switch t := r.Rows[i][index].(type) </span>{
+                        case int8:<span class="cov0" title="0">
+                                r.Rows[i][index] = uint8(t)</span>
+                        case int16:<span class="cov0" title="0">
+                                r.Rows[i][index] = uint16(t)</span>
+                        case int32:<span class="cov0" title="0">
+                                r.Rows[i][index] = uint32(t)</span>
+                        case int64:<span class="cov0" title="0">
+                                r.Rows[i][index] = uint64(t)</span>
+                        case int:<span class="cov0" title="0">
+                                r.Rows[i][index] = uint(t)</span>
+                        default:<span class="cov0" title="0"></span>
+                                // nothing to do
+                        }
+                }
+        }
+}
+
+// String implements fmt.Stringer interface.
+func (r *RowsEvent) String() string <span class="cov0" title="0">{
+        return fmt.Sprintf("%s %s %v", r.Action, r.Table, r.Rows)
+}</span>
+</pre>
+		
+		<pre class="file" id="file19" style="display: none">package canal
+
+import (
+        "fmt"
+        "regexp"
+        "strings"
+        "time"
+
+        "github.com/pingcap/errors"
+        "github.com/satori/go.uuid"
+        "github.com/siddontang/go-log/log"
+        "github.com/siddontang/go-mysql/mysql"
+        "github.com/siddontang/go-mysql/replication"
+        "github.com/siddontang/go-mysql/schema"
+)
+
+var (
+        expCreateTable   = regexp.MustCompile("(?i)^CREATE\\sTABLE(\\sIF\\sNOT\\sEXISTS)?\\s`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
+        expAlterTable    = regexp.MustCompile("(?i)^ALTER\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s.*")
+        expRenameTable   = regexp.MustCompile("(?i)^RENAME\\sTABLE\\s.*?`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}\\s{1,}TO\\s.*?")
+        expDropTable     = regexp.MustCompile("(?i)^DROP\\sTABLE(\\sIF\\sEXISTS){0,1}\\s`{0,1}(.*?)`{0,1}\\.{0,1}`{0,1}([^`\\.]+?)`{0,1}(?:$|\\s)")
+        expTruncateTable = regexp.MustCompile("(?i)^TRUNCATE\\s+(?:TABLE\\s+)?(?:`?([^`\\s]+)`?\\.`?)?([^`\\s]+)`?")
+)
+
+func (c *Canal) startSyncer() (*replication.BinlogStreamer, error) <span class="cov8" title="1">{
+        gset := c.master.GTIDSet()
+        if gset == nil </span><span class="cov8" title="1">{
+                pos := c.master.Position()
+                s, err := c.syncer.StartSync(pos)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, errors.Errorf("start sync replication at binlog %v error %v", pos, err)
+                }</span>
+                <span class="cov8" title="1">log.Infof("start sync binlog at binlog file %v", pos)
+                return s, nil</span>
+        } else<span class="cov0" title="0"> {
+                s, err := c.syncer.StartSyncGTID(gset)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, errors.Errorf("start sync replication at GTID set %v error %v", gset, err)
+                }</span>
+                <span class="cov0" title="0">log.Infof("start sync binlog at GTID set %v", gset)
+                return s, nil</span>
+        }
+}
+
+func (c *Canal) runSyncBinlog() error <span class="cov8" title="1">{
+        s, err := c.startSyncer()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">savePos := false
+        force := false
+        for </span><span class="cov8" title="1">{
+                ev, err := s.GetEvent(c.ctx)
+
+                if err != nil </span><span class="cov8" title="1">{
+                        return errors.Trace(err)
+                }</span>
+                <span class="cov8" title="1">savePos = false
+                force = false
+                pos := c.master.Position()
+
+                curPos := pos.Pos
+                //next binlog pos
+                pos.Pos = ev.Header.LogPos
+
+                // We only save position with RotateEvent and XIDEvent.
+                // For RowsEvent, we can't save the position until meeting XIDEvent
+                // which tells the whole transaction is over.
+                // TODO: If we meet any DDL query, we must save too.
+                switch e := ev.Event.(type) </span>{
+                case *replication.RotateEvent:<span class="cov8" title="1">
+                        pos.Name = string(e.NextLogName)
+                        pos.Pos = uint32(e.Position)
+                        log.Infof("rotate binlog to %s", pos)
+                        savePos = true
+                        force = true
+                        if err = c.eventHandler.OnRotate(e); err != nil </span><span class="cov0" title="0">{
+                                return errors.Trace(err)
+                        }</span>
+                case *replication.RowsEvent:<span class="cov8" title="1">
+                        // we only focus row based event
+                        err = c.handleRowsEvent(ev)
+                        if err != nil </span><span class="cov8" title="1">{
+                                e := errors.Cause(err)
+                                // if error is not ErrExcludedTable or ErrTableNotExist or ErrMissingTableMeta, stop canal
+                                if e != ErrExcludedTable &amp;&amp;
+                                        e != schema.ErrTableNotExist &amp;&amp;
+                                        e != schema.ErrMissingTableMeta </span><span class="cov0" title="0">{
+                                        log.Errorf("handle rows event at (%s, %d) error %v", pos.Name, curPos, err)
+                                        return errors.Trace(err)
+                                }</span>
+                        }
+                        <span class="cov8" title="1">continue</span>
+                case *replication.XIDEvent:<span class="cov8" title="1">
+                        if e.GSet != nil </span><span class="cov0" title="0">{
+                                c.master.UpdateGTIDSet(e.GSet)
+                        }</span>
+                        <span class="cov8" title="1">savePos = true
+                        // try to save the position later
+                        if err := c.eventHandler.OnXID(pos); err != nil </span><span class="cov0" title="0">{
+                                return errors.Trace(err)
+                        }</span>
+                case *replication.MariadbGTIDEvent:<span class="cov0" title="0">
+                        // try to save the GTID later
+                        gtid, err := mysql.ParseMariadbGTIDSet(e.GTID.String())
+                        if err != nil </span><span class="cov0" title="0">{
+                                return errors.Trace(err)
+                        }</span>
+                        <span class="cov0" title="0">if err := c.eventHandler.OnGTID(gtid); err != nil </span><span class="cov0" title="0">{
+                                return errors.Trace(err)
+                        }</span>
+                case *replication.GTIDEvent:<span class="cov8" title="1">
+                        u, _ := uuid.FromBytes(e.SID)
+                        gtid, err := mysql.ParseMysqlGTIDSet(fmt.Sprintf("%s:%d", u.String(), e.GNO))
+                        if err != nil </span><span class="cov0" title="0">{
+                                return errors.Trace(err)
+                        }</span>
+                        <span class="cov8" title="1">if err := c.eventHandler.OnGTID(gtid); err != nil </span><span class="cov0" title="0">{
+                                return errors.Trace(err)
+                        }</span>
+                case *replication.QueryEvent:<span class="cov8" title="1">
+                        if e.GSet != nil </span><span class="cov0" title="0">{
+                                c.master.UpdateGTIDSet(e.GSet)
+                        }</span>
+
+                        // Handle XA.
+                        <span class="cov8" title="1">if strings.HasPrefix(string(e.Query), "XA") </span><span class="cov0" title="0">{
+                                savePos = true
+                                events := newXAEvent(e.Query)
+                                if err = c.handleXAEvent(events); err != nil </span><span class="cov0" title="0">{
+                                        return errors.Trace(err)
+                                }</span>
+                        } else<span class="cov8" title="1"> {
+                                var (
+                                        mb    [][]byte
+                                        db    []byte
+                                        table []byte
+                                )
+                                regexps := []regexp.Regexp{*expCreateTable, *expAlterTable, *expRenameTable, *expDropTable, *expTruncateTable}
+                                for _, reg := range regexps </span><span class="cov8" title="1">{
+                                        mb = reg.FindSubmatch(e.Query)
+                                        if len(mb) != 0 </span><span class="cov8" title="1">{
+                                                break</span>
+                                        }
+                                }
+                                <span class="cov8" title="1">mbLen := len(mb)
+                                if mbLen == 0 </span><span class="cov8" title="1">{
+                                        continue</span>
+                                }
+
+                                // the first last is table name, the second last is database name(if exists)
+                                <span class="cov8" title="1">if len(mb[mbLen-2]) == 0 </span><span class="cov0" title="0">{
+                                        db = e.Schema
+                                }</span> else<span class="cov8" title="1"> {
+                                        db = mb[mbLen-2]
+                                }</span>
+                                <span class="cov8" title="1">table = mb[mbLen-1]
+
+                                savePos = true
+                                force = true
+                                c.ClearTableCache(db, table)
+                                log.Infof("table structure changed, clear table cache: %s.%s\n", db, table)
+                                if err = c.eventHandler.OnTableChanged(string(db), string(table)); err != nil &amp;&amp; errors.Cause(err) != schema.ErrTableNotExist </span><span class="cov0" title="0">{
+                                        return errors.Trace(err)
+                                }</span>
+
+                                // Now we only handle Table Changed DDL, maybe we will support more later.
+                                <span class="cov8" title="1">if err = c.eventHandler.OnDDL(pos, e); err != nil </span><span class="cov0" title="0">{
+                                        return errors.Trace(err)
+                                }</span>
+                        }
+                default:<span class="cov8" title="1">
+                        if pos.Pos &gt; 0 </span><span class="cov8" title="1">{
+                                savePos = true
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if savePos </span><span class="cov8" title="1">{
+                        c.master.Update(pos)
+                        c.master.UpdateTimestamp(ev.Header.Timestamp)
+                        if err := c.eventHandler.OnPosSynced(pos, force); err != nil </span><span class="cov0" title="0">{
+                                return errors.Trace(err)
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (c *Canal) handleRowsEvent(e *replication.BinlogEvent) error <span class="cov8" title="1">{
+        ev := e.Event.(*replication.RowsEvent)
+
+        // Caveat: table may be altered at runtime.
+        schema := string(ev.Table.Schema)
+        table := string(ev.Table.Table)
+
+        t, err := c.GetTable(schema, table)
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+        <span class="cov8" title="1">var action string
+        switch e.Header.EventType </span>{
+        case replication.WRITE_ROWS_EVENTv1, replication.WRITE_ROWS_EVENTv2:<span class="cov8" title="1">
+                action = InsertAction</span>
+        case replication.DELETE_ROWS_EVENTv1, replication.DELETE_ROWS_EVENTv2:<span class="cov0" title="0">
+                action = DeleteAction</span>
+        case replication.UPDATE_ROWS_EVENTv1, replication.UPDATE_ROWS_EVENTv2:<span class="cov0" title="0">
+                action = UpdateAction</span>
+        default:<span class="cov0" title="0">
+                return errors.Errorf("%s not supported now", e.Header.EventType)</span>
+        }
+        <span class="cov8" title="1">events := newRowsEvent(t, action, ev.Rows, e.Header)
+        return c.eventHandler.OnRow(events)</span>
+}
+
+func (c *Canal) handleXAEvent(e *XAEvent) error <span class="cov0" title="0">{
+        return c.eventHandler.OnXA(e)
+}</span>
+
+func (c *Canal) FlushBinlog() error <span class="cov8" title="1">{
+        _, err := c.Execute("FLUSH BINARY LOGS")
+        return errors.Trace(err)
+}</span>
+
+func (c *Canal) WaitUntilPos(pos mysql.Position, timeout time.Duration) error <span class="cov8" title="1">{
+        timer := time.NewTimer(timeout)
+        for </span><span class="cov8" title="1">{
+                select </span>{
+                case &lt;-timer.C:<span class="cov0" title="0">
+                        return errors.Errorf("wait position %v too long &gt; %s", pos, timeout)</span>
+                default:<span class="cov8" title="1">
+                        err := c.FlushBinlog()
+                        if err != nil </span><span class="cov0" title="0">{
+                                return errors.Trace(err)
+                        }</span>
+                        <span class="cov8" title="1">curPos := c.master.Position()
+                        if curPos.Compare(pos) &gt;= 0 </span><span class="cov8" title="1">{
+                                return nil
+                        }</span> else<span class="cov8" title="1"> {
+                                log.Debugf("master pos is %v, wait catching %v", curPos, pos)
+                                time.Sleep(100 * time.Millisecond)
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (c *Canal) GetMasterPos() (mysql.Position, error) <span class="cov8" title="1">{
+        rr, err := c.Execute("SHOW MASTER STATUS")
+        if err != nil </span><span class="cov0" title="0">{
+                return mysql.Position{}, errors.Trace(err)
+        }</span>
+
+        <span class="cov8" title="1">name, _ := rr.GetString(0, 0)
+        pos, _ := rr.GetInt(0, 1)
+
+        return mysql.Position{Name: name, Pos: uint32(pos)}, nil</span>
+}
+
+func (c *Canal) GetMasterGTIDSet() (mysql.GTIDSet, error) <span class="cov0" title="0">{
+        query := ""
+        switch c.cfg.Flavor </span>{
+        case mysql.MariaDBFlavor:<span class="cov0" title="0">
+                query = "SELECT @@GLOBAL.gtid_current_pos"</span>
+        default:<span class="cov0" title="0">
+                query = "SELECT @@GLOBAL.GTID_EXECUTED"</span>
+        }
+        <span class="cov0" title="0">rr, err := c.Execute(query)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.Trace(err)
+        }</span>
+        <span class="cov0" title="0">gx, err := rr.GetString(0, 0)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.Trace(err)
+        }</span>
+        <span class="cov0" title="0">gset, err := mysql.ParseGTIDSet(c.cfg.Flavor, gx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.Trace(err)
+        }</span>
+        <span class="cov0" title="0">return gset, nil</span>
+}
+
+func (c *Canal) CatchMasterPos(timeout time.Duration) error <span class="cov8" title="1">{
+        pos, err := c.GetMasterPos()
+        if err != nil </span><span class="cov0" title="0">{
+                return errors.Trace(err)
+        }</span>
+
+        <span class="cov8" title="1">return c.WaitUntilPos(pos, timeout)</span>
+}
+</pre>
+		
+		<pre class="file" id="file20" style="display: none">package canal
+
+import ()
+
+// XAEvent --
+type XAEvent struct {
+        Action string
+        Query  []byte
+}
+
+func newXAEvent(query []byte) *XAEvent <span class="cov0" title="0">{
+        return &amp;XAEvent{
+                Query: query,
+        }
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
